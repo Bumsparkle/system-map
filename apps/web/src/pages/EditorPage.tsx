@@ -1,31 +1,58 @@
+import { Canvas } from '@/components/canvas/Canvas'
+import { Inspector } from '@/components/inspector/Inspector'
+import { NodePalette } from '@/components/palette/NodePalette'
+import { TopBar } from '@/components/toolbar/TopBar'
 import { buttonVariants } from '@/components/ui/button'
 import { useDiagram } from '@/lib/api'
 import { cn } from '@/lib/utils'
+import { useDiagramStore } from '@/stores/diagramStore'
+import { ReactFlowProvider } from '@xyflow/react'
 import { ArrowLeft } from 'lucide-react'
+import { useEffect } from 'react'
 import { Link, useParams } from 'react-router-dom'
+
+function FullScreen({ message, withBack }: { message: string; withBack?: boolean }) {
+  return (
+    <div className="flex h-full flex-col items-center justify-center gap-4 bg-canvas">
+      <p className="text-sm text-ink-muted">{message}</p>
+      {withBack && (
+        <Link to="/" className={cn(buttonVariants({ variant: 'outline', size: 'sm' }))}>
+          <ArrowLeft className="h-4 w-4" />
+          Back to dashboard
+        </Link>
+      )}
+    </div>
+  )
+}
 
 export function EditorPage() {
   const { diagramId } = useParams<{ diagramId: string }>()
-  const diagram = useDiagram(diagramId ?? '')
+  const query = useDiagram(diagramId ?? '')
+  const detail = query.data
+  const hydrate = useDiagramStore((s) => s.hydrate)
+  const reset = useDiagramStore((s) => s.reset)
+
+  useEffect(() => {
+    if (detail) hydrate(detail)
+  }, [detail, hydrate])
+
+  useEffect(() => () => reset(), [reset])
+
+  if (query.isLoading) return <FullScreen message="Loading diagram…" />
+  if (query.isError || !detail) return <FullScreen message="Couldn't load this diagram." withBack />
 
   return (
-    <div className="flex h-full flex-col">
-      <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border bg-surface px-4">
-        <Link
-          to="/"
-          aria-label="Back to dashboard"
-          className={cn(buttonVariants({ variant: 'ghost', size: 'icon-sm' }))}
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Link>
-        <span className="font-medium">
-          {diagram.data?.name ?? (diagram.isLoading ? 'Loading…' : 'Diagram')}
-        </span>
-      </header>
-
-      <div className="grid flex-1 place-items-center bg-canvas">
-        <p className="text-sm text-ink-subtle">Canvas arrives in Phase 2.</p>
+    <ReactFlowProvider>
+      <div className="flex h-full flex-col">
+        <TopBar />
+        <div className="flex min-h-0 flex-1">
+          <NodePalette />
+          <div className="relative min-w-0 flex-1">
+            <Canvas />
+          </div>
+          <Inspector />
+        </div>
       </div>
-    </div>
+    </ReactFlowProvider>
   )
 }

@@ -71,3 +71,51 @@
     transition-duration: 120ms;
   }
 }
+
+/* ------------------------------------------------------------------ */
+/* React Flow theming (overrides its base stylesheet)                  */
+/* ------------------------------------------------------------------ */
+.react-flow {
+  background-color: var(--color-canvas);
+}
+
+.react-flow__node {
+  font-family: var(--font-sans);
+}
+
+.react-flow__node:focus,
+.react-flow__node:focus-visible {
+  outline: none;
+}
+
+/* Handles: 8px circles, border-strong, visible only on node hover/selection (spec §10) */
+.react-flow__handle {
+  width: 8px;
+  height: 8px;
+  min-width: 8px;
+  min-height: 8px;
+  border: none;
+  background-color: var(--color-border-strong);
+  opacity: 0;
+  transition: opacity 120ms ease-out, background-color 120ms ease-out;
+}
+
+.react-flow__node:hover .react-flow__handle,
+.react-flow__node.selected .react-flow__handle,
+.react-flow__handle.connecting,
+.react-flow__handle-connecting {
+  opacity: 1;
+}
+
+.react-flow__handle:hover {
+  background-color: var(--color-accent);
+}
+
+.react-flow__attribution {
+  background: transparent;
+  font-size: 10px;
+}
+
+.react-flow__attribution a {
+  color: var(--color-ink-subtle);
+}

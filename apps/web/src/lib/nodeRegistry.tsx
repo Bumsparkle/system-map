@@ -1,0 +1,84 @@
+import { AppNode } from '@/components/canvas/nodes/AppNode'
+import { CustomNode } from '@/components/canvas/nodes/CustomNode'
+import { SystemNode } from '@/components/canvas/nodes/SystemNode'
+import type { SMNode } from '@/lib/flow'
+import type { NodeType } from '@system-map/shared'
+import type { NodeProps, NodeTypes } from '@xyflow/react'
+import { AppWindow, Server, Shapes } from 'lucide-react'
+import type { ComponentType } from 'react'
+
+export type NodeTypeMeta = {
+  type: NodeType
+  label: string
+  hint: string
+  category: string
+  icon: ComponentType<{ className?: string }>
+}
+
+type NodeRegistryEntry = {
+  meta: NodeTypeMeta
+  component: ComponentType<NodeProps<SMNode>>
+}
+
+// Default label given to a freshly dropped node, before the user renames it.
+export const NODE_DEFAULT_LABEL: Record<NodeType, string> = {
+  app: 'New app',
+  system: 'New service',
+  data_source: 'New data source',
+  external_entity: 'New entity',
+  cash: 'New cash flow',
+  group: 'New group',
+  custom: 'New node',
+}
+
+// Human-readable name for each node type (shown in the inspector header).
+export const NODE_TYPE_LABEL: Record<NodeType, string> = {
+  app: 'App',
+  system: 'System',
+  data_source: 'Data source',
+  external_entity: 'External entity',
+  cash: 'Cash',
+  group: 'Group',
+  custom: 'Custom',
+}
+
+// Only types with a registered component appear on the canvas + palette.
+// Phase 6 adds data_source / external_entity / cash / group here.
+export const nodeRegistry = {
+  app: {
+    component: AppNode,
+    meta: {
+      type: 'app',
+      label: 'App',
+      hint: 'A SaaS app (Slack, Stripe…)',
+      category: 'Building blocks',
+      icon: AppWindow,
+    },
+  },
+  system: {
+    component: SystemNode,
+    meta: {
+      type: 'system',
+      label: 'System',
+      hint: 'Internal tool or service',
+      category: 'Building blocks',
+      icon: Server,
+    },
+  },
+  custom: {
+    component: CustomNode,
+    meta: {
+      type: 'custom',
+      label: 'Custom',
+      hint: 'Free-form node',
+      category: 'Other',
+      icon: Shapes,
+    },
+  },
+} satisfies Partial<Record<NodeType, NodeRegistryEntry>>
+
+export const nodeTypes: NodeTypes = Object.fromEntries(
+  Object.entries(nodeRegistry).map(([type, entry]) => [type, entry.component]),
+) as NodeTypes
+
+export const paletteMetas: NodeTypeMeta[] = Object.values(nodeRegistry).map((e) => e.meta)
