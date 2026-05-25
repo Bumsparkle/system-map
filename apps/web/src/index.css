@@ -1,0 +1,73 @@
+@import "tailwindcss";
+
+/* ------------------------------------------------------------------ */
+/* Design tokens (spec §10) — DO NOT default-shadcn this.              */
+/* ------------------------------------------------------------------ */
+@theme {
+  /* Surfaces — warm off-white, not pure */
+  --color-canvas: #fbfaf7;
+  --color-surface: #ffffff;
+  --color-surface-2: #f4f2ed;
+  --color-border: #e8e4dc;
+  --color-border-strong: #c9c3b6;
+
+  /* Text */
+  --color-ink: #1a1a1a;
+  --color-ink-muted: #6b6963;
+  --color-ink-subtle: #94918a;
+
+  /* Accent — burnt sienna, distinctive (not blue/purple) */
+  --color-accent: #d4471f;
+  --color-accent-hover: #b83a18;
+  --color-accent-soft: #fbe8e1;
+
+  /* Flow colors (used by edges) */
+  --color-flow-data: #475569;
+  --color-flow-cash: #047857;
+  --color-flow-api: #4f46e5;
+  --color-flow-manual: #b45309;
+  --color-flow-event: #a21caf;
+
+  /* Type — Geist (never Inter) */
+  --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono Variable", ui-monospace, SFMono-Regular, monospace;
+
+  /* Node shell */
+  --radius-node: 8px;
+
+  /* Soft node shadows (spec §10) */
+  --shadow-node: 0 1px 2px rgba(20, 20, 20, 0.04), 0 4px 12px rgba(20, 20, 20, 0.04);
+  --shadow-node-hover: 0 1px 2px rgba(20, 20, 20, 0.06), 0 6px 18px rgba(20, 20, 20, 0.08);
+}
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+    background-color: var(--color-canvas);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-synthesis-weight: none;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* All chrome transitions are 120ms ease-out, never the lazy 200ms. */
+  button,
+  a,
+  input,
+  [data-transition] {
+    transition-timing-function: ease-out;
+    transition-duration: 120ms;
+  }
+}

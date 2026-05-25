@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: system-map-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: systemmap
+      POSTGRES_PASSWORD: systemmap
+      POSTGRES_DB: systemmap
+    ports:
+      - "5432:5432"
+    volumes:
+      - system-map-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U systemmap -d systemmap"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  system-map-pgdata:
