@@ -1,7 +1,11 @@
+import { layoutNodes } from '@/lib/autoLayout'
+import { makeVisibilityPredicate } from '@/lib/displayGraph'
 import { cn } from '@/lib/utils'
+import { useDiagramStore } from '@/stores/diagramStore'
+import { toast } from '@/stores/toastStore'
 import { useUiStore } from '@/stores/uiStore'
 import { useReactFlow } from '@xyflow/react'
-import { Grid2x2, Map as MapIcon, Maximize, Minus, Plus } from 'lucide-react'
+import { Grid2x2, Map as MapIcon, Maximize, Minus, Plus, Sparkles } from 'lucide-react'
 import type { ReactNode } from 'react'
 
 function CtrlButton({
@@ -38,6 +42,35 @@ export function ZoomControls() {
   const showMinimap = useUiStore((s) => s.showMinimap)
   const toggleMinimap = useUiStore((s) => s.toggleMinimap)
 
+  async function handleTidy() {
+    try {
+      const s = useDiagramStore.getState()
+      const view = s.views.find((v) => v.id === s.activeViewId) ?? null
+      const isVisible = makeVisibilityPredicate(s.layers, view)
+      // Tidy lays out only visible, non-container nodes; hidden nodes keep positions.
+      const layoutable = s.nodes.filter((n) => n.type !== 'group' && isVisible(n))
+      if (layoutable.length < 2) return
+      const ids = new Set(layoutable.map((n) => n.id))
+      const edges = s.edges.filter((e) => ids.has(e.source) && ids.has(e.target))
+
+      const positions = await layoutNodes(layoutable, edges)
+      if (Object.keys(positions).length === 0) return
+
+      const flowEl = document.querySelector('.react-flow')
+      flowEl?.classList.add('sm-animate-nodes')
+      useDiagramStore.getState().applyLayout(positions)
+      window.setTimeout(() => fitView({ duration: 400, padding: 0.2 }), 60)
+      window.setTimeout(() => flowEl?.classList.remove('sm-animate-nodes'), 480)
+
+      toast({
+        message: 'Layout applied',
+        action: { label: 'Undo', onClick: () => useDiagramStore.temporal.getState().undo() },
+      })
+    } catch {
+      toast({ message: 'Auto-layout failed', variant: 'error' })
+    }
+  }
+
   return (
     <div className="nopan nodrag absolute bottom-4 left-4 z-10 flex items-center gap-0.5 rounded-[8px] border border-border bg-surface p-1 shadow-node">
       <CtrlButton onClick={() => zoomIn({ duration: 120 })} label="Zoom in">
@@ -55,6 +88,10 @@ export function ZoomControls() {
       </CtrlButton>
       <CtrlButton onClick={toggleMinimap} label="Toggle minimap" active={showMinimap}>
         <MapIcon className="h-4 w-4" />
+      </CtrlButton>
+      <div className="mx-0.5 h-5 w-px bg-border" />
+      <CtrlButton onClick={() => void handleTidy()} label="Tidy layout">
+        <Sparkles className="h-4 w-4" />
       </CtrlButton>
     </div>
   )

@@ -130,3 +130,8 @@
 .react-flow__edge {
   cursor: pointer;
 }
+
+/* Smoothly animate node positions during auto-layout (spec §2) */
+.sm-animate-nodes .react-flow__node {
+  transition: transform 400ms ease;
+}

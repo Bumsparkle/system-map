@@ -13,7 +13,7 @@ const GROUP_GAP = 56
 
 export type CategoryGroupData = { label: string; count: number }
 
-function makeVisibilityPredicate(layers: Layer[], view: View | null) {
+export function makeVisibilityPredicate(layers: Layer[], view: View | null) {
   const layerVisible = new Map(layers.map((l) => [l.id, l.visible]))
   const viewLayers = view ? new Set(view.filter.layerIds) : null
   const viewNodeTypes = view ? new Set(view.filter.nodeTypes) : null

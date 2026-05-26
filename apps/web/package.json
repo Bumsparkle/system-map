@@ -21,6 +21,7 @@
     "@xyflow/react": "^12.3.6",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "elkjs": "^0.9.3",
     "lucide-react": "^0.469.0",
     "nanoid": "^5.0.9",
     "react": "^18.3.1",

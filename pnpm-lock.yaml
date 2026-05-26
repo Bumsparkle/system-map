@@ -96,6 +96,9 @@ importers:
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
+      elkjs:
+        specifier: ^0.9.3
+        version: 0.9.3
       html-to-image:
         specifier: ^1.11.11
         version: 1.11.13
@@ -1819,6 +1822,9 @@ packages:
 
   electron-to-chromium@1.5.361:
     resolution: {integrity: sha512-Q6Hts7N9FnJc5LeGRINFvLhCI9xZmNtTDe5ZbcVezQz7cU4a8Aua3GH1b8J2XY8Al9PF+OCwYqhgsOOheMdvkA==}
+
+  elkjs@0.9.3:
+    resolution: {integrity: sha512-f/ZeWvW/BCXbhGEf1Ujp29EASo/lk1FDnETgNKwJrsVvGZhUWCZyg3xLJjAsxfOmt8KjswHmI5EwCQcPMpOYhQ==}
 
   end-of-stream@1.4.5:
     resolution: {integrity: sha512-ooEGc6HP26xXq/N+GCGOT0JKCLDGrq2bQUZrQ7gyrJiZANJ/8YDTxTpQBXGMn+WbIQXNVpyWymm7KYVICQnyOg==}
@@ -3639,6 +3645,8 @@ snapshots:
       react: 18.3.1
 
   electron-to-chromium@1.5.361: {}
+
+  elkjs@0.9.3: {}
 
   end-of-stream@1.4.5:
     dependencies:

@@ -61,6 +61,7 @@ type DiagramStore = {
   updateNodeData: (id: string, patch: Partial<NodeData>) => void
   removeNode: (id: string) => void
   duplicateSelected: () => void
+  applyLayout: (positions: Record<string, { x: number; y: number }>) => void
 
   updateEdgeData: (id: string, patch: Partial<EdgeData>) => void
   setEdgeFlowType: (id: string, flowType: FlowType) => void
@@ -293,6 +294,14 @@ export const useDiagramStore = create<DiagramStore>()(
           }))
           return { nodes: [...s.nodes.map((n) => ({ ...n, selected: false })), ...clones] }
         }),
+
+      applyLayout: (positions) =>
+        set((s) => ({
+          nodes: s.nodes.map((n) => {
+            const p = positions[n.id]
+            return p ? { ...n, position: p } : n
+          }),
+        })),
     }),
     {
       // Undo/redo history (spec §6/§11). Only persistable fields are tracked, so
