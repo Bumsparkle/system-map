@@ -1,6 +1,7 @@
+import { buildDisplayGraph } from '@/lib/displayGraph'
 import { DND_MIME } from '@/lib/dnd'
 import { edgeTypes } from '@/lib/edgeRegistry'
-import type { SMEdge } from '@/lib/flow'
+import type { SMEdge, SMNode } from '@/lib/flow'
 import { nodeTypes } from '@/lib/nodeRegistry'
 import { useDiagramStore } from '@/stores/diagramStore'
 import { useUiStore } from '@/stores/uiStore'
@@ -9,10 +10,13 @@ import {
   Background,
   BackgroundVariant,
   ConnectionMode,
+  type Edge,
+  type EdgeChange,
+  type NodeChange,
   ReactFlow,
   useReactFlow,
 } from '@xyflow/react'
-import { type DragEvent, type MouseEvent, useCallback, useState } from 'react'
+import { type DragEvent, type MouseEvent, useCallback, useMemo, useState } from 'react'
 import { ContextMenu } from './ContextMenu'
 import { ZoomControls } from './controls/ZoomControls'
 import { EdgeMarkers } from './edges/BaseEdge'
@@ -22,6 +26,9 @@ type MenuState = { x: number; y: number; edgeId: string }
 export function Canvas() {
   const nodes = useDiagramStore((s) => s.nodes)
   const edges = useDiagramStore((s) => s.edges)
+  const layers = useDiagramStore((s) => s.layers)
+  const views = useDiagramStore((s) => s.views)
+  const activeViewId = useDiagramStore((s) => s.activeViewId)
   const onNodesChange = useDiagramStore((s) => s.onNodesChange)
   const onEdgesChange = useDiagramStore((s) => s.onEdgesChange)
   const onConnect = useDiagramStore((s) => s.onConnect)
@@ -30,6 +37,15 @@ export function Canvas() {
   const flashNode = useUiStore((s) => s.flashNode)
   const { screenToFlowPosition } = useReactFlow()
   const [menu, setMenu] = useState<MenuState | null>(null)
+
+  const activeView = useMemo(
+    () => views.find((v) => v.id === activeViewId) ?? null,
+    [views, activeViewId],
+  )
+  const display = useMemo(
+    () => buildDisplayGraph(nodes, edges, layers, activeView),
+    [nodes, edges, layers, activeView],
+  )
 
   const onDragOver = useCallback((event: DragEvent) => {
     event.preventDefault()
@@ -48,7 +64,7 @@ export function Canvas() {
     [screenToFlowPosition, addNode, flashNode],
   )
 
-  const onEdgeContextMenu = useCallback((event: MouseEvent, edge: SMEdge) => {
+  const onEdgeContextMenu = useCallback((event: MouseEvent, edge: Edge) => {
     event.preventDefault()
     setMenu({ x: event.clientX, y: event.clientY, edgeId: edge.id })
   }, [])
@@ -57,12 +73,12 @@ export function Canvas() {
     <div className="h-full w-full" onDrop={onDrop} onDragOver={onDragOver}>
       <EdgeMarkers />
       <ReactFlow
-        nodes={nodes}
-        edges={edges}
+        nodes={display.nodes}
+        edges={display.edges}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
+        onNodesChange={(changes) => onNodesChange(changes as NodeChange<SMNode>[])}
+        onEdgesChange={(changes) => onEdgesChange(changes as EdgeChange<SMEdge>[])}
         onConnect={onConnect}
         connectionMode={ConnectionMode.Loose}
         onEdgeContextMenu={onEdgeContextMenu}

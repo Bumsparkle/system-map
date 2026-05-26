@@ -1,4 +1,5 @@
 import { AppNode } from '@/components/canvas/nodes/AppNode'
+import { CategoryGroupNode } from '@/components/canvas/nodes/CategoryGroupNode'
 import { CustomNode } from '@/components/canvas/nodes/CustomNode'
 import { SystemNode } from '@/components/canvas/nodes/SystemNode'
 import type { SMNode } from '@/lib/flow'
@@ -77,8 +78,12 @@ export const nodeRegistry = {
   },
 } satisfies Partial<Record<NodeType, NodeRegistryEntry>>
 
-export const nodeTypes: NodeTypes = Object.fromEntries(
-  Object.entries(nodeRegistry).map(([type, entry]) => [type, entry.component]),
-) as NodeTypes
+export const nodeTypes: NodeTypes = {
+  ...(Object.fromEntries(
+    Object.entries(nodeRegistry).map(([type, entry]) => [type, entry.component]),
+  ) as NodeTypes),
+  // Display-only container used by the groupBy:'category' view (spec §7).
+  categoryGroup: CategoryGroupNode,
+}
 
 export const paletteMetas: NodeTypeMeta[] = Object.values(nodeRegistry).map((e) => e.meta)

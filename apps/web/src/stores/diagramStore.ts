@@ -1,4 +1,5 @@
 import { type SMEdge, type SMNode, toFlowEdge, toFlowNode } from '@/lib/flow'
+import { nextLayerColor } from '@/lib/layerColors'
 import { NODE_DEFAULT_LABEL } from '@/lib/nodeRegistry'
 import type {
   DiagramDetail,
@@ -8,6 +9,7 @@ import type {
   NodeData,
   NodeType,
   View,
+  ViewFilter,
 } from '@system-map/shared'
 import {
   type Connection,
@@ -30,12 +32,25 @@ type DiagramStore = {
   nodes: SMNode[]
   edges: SMEdge[]
   views: View[]
+  activeViewId: string | null
   hydrated: boolean
 
   hydrate: (detail: DiagramDetail) => void
   reset: () => void
   setName: (name: string) => void
   setActiveLayer: (layerId: string) => void
+
+  addLayer: () => string
+  updateLayer: (id: string, patch: Partial<Pick<Layer, 'name' | 'color' | 'visible'>>) => void
+  toggleLayerVisible: (id: string) => void
+  moveLayer: (id: string, dir: 'up' | 'down') => void
+  removeLayer: (id: string) => void
+  setNodeLayer: (nodeId: string, layerId: string) => void
+
+  setActiveView: (id: string | null) => void
+  addView: (input: { name: string; filter: ViewFilter; isDefault?: boolean }) => string
+  removeView: (id: string) => void
+  setDefaultView: (id: string) => void
 
   onNodesChange: (changes: NodeChange<SMNode>[]) => void
   onEdgesChange: (changes: EdgeChange<SMEdge>[]) => void
@@ -61,6 +76,7 @@ const initialState = {
   nodes: [] as SMNode[],
   edges: [] as SMEdge[],
   views: [] as View[],
+  activeViewId: null,
   hydrated: false,
 }
 
@@ -79,6 +95,7 @@ export const useDiagramStore = create<DiagramStore>((set, get) => ({
       nodes: detail.nodes.map(toFlowNode),
       edges: detail.edges.map(toFlowEdge),
       views: detail.views,
+      activeViewId: detail.views.find((v) => v.isDefault)?.id ?? null,
       hydrated: true,
     })
   },
@@ -87,6 +104,91 @@ export const useDiagramStore = create<DiagramStore>((set, get) => ({
 
   setName: (name) => set({ name }),
   setActiveLayer: (activeLayerId) => set({ activeLayerId }),
+
+  addLayer: () => {
+    const id = nanoid()
+    const { layers, diagramId } = get()
+    if (!diagramId) return id
+    const maxOrder = layers.reduce((m, l) => Math.max(m, l.order), -1)
+    const layer: Layer = {
+      id,
+      diagramId,
+      name: `Layer ${layers.length + 1}`,
+      color: nextLayerColor(layers.length),
+      order: maxOrder + 1,
+      visible: true,
+    }
+    set({ layers: [...layers, layer], activeLayerId: id })
+    return id
+  },
+
+  updateLayer: (id, patch) =>
+    set((s) => ({ layers: s.layers.map((l) => (l.id === id ? { ...l, ...patch } : l)) })),
+
+  toggleLayerVisible: (id) =>
+    set((s) => ({
+      layers: s.layers.map((l) => (l.id === id ? { ...l, visible: !l.visible } : l)),
+    })),
+
+  moveLayer: (id, dir) =>
+    set((s) => {
+      const sorted = [...s.layers].sort((a, b) => a.order - b.order)
+      const idx = sorted.findIndex((l) => l.id === id)
+      const swapWith = dir === 'up' ? idx - 1 : idx + 1
+      if (idx === -1 || swapWith < 0 || swapWith >= sorted.length) return {}
+      const a = sorted[idx]
+      const b = sorted[swapWith]
+      if (!a || !b) return {}
+      const reordered = s.layers.map((l) => {
+        if (l.id === a.id) return { ...l, order: b.order }
+        if (l.id === b.id) return { ...l, order: a.order }
+        return l
+      })
+      return { layers: reordered }
+    }),
+
+  removeLayer: (id) =>
+    set((s) => {
+      if (s.layers.length <= 1) return {} // always keep at least one layer
+      const remaining = s.layers.filter((l) => l.id !== id)
+      const fallback = [...remaining].sort((a, b) => a.order - b.order)[0]
+      if (!fallback) return {}
+      // reassign the deleted layer's nodes to the fallback (don't lose them)
+      const nodes = s.nodes.map((n) =>
+        n.data.layerId === id ? { ...n, data: { ...n.data, layerId: fallback.id } } : n,
+      )
+      const activeLayerId = s.activeLayerId === id ? fallback.id : s.activeLayerId
+      return { layers: remaining, nodes, activeLayerId }
+    }),
+
+  setNodeLayer: (nodeId, layerId) =>
+    set((s) => ({
+      nodes: s.nodes.map((n) => (n.id === nodeId ? { ...n, data: { ...n.data, layerId } } : n)),
+    })),
+
+  setActiveView: (id) => set({ activeViewId: id }),
+
+  addView: (input) => {
+    const id = nanoid()
+    const { diagramId, views } = get()
+    if (!diagramId) return id
+    const isDefault = input.isDefault ?? false
+    const view: View = { id, diagramId, name: input.name, filter: input.filter, isDefault }
+    const nextViews = isDefault
+      ? [...views.map((v) => ({ ...v, isDefault: false })), view]
+      : [...views, view]
+    set({ views: nextViews, activeViewId: id })
+    return id
+  },
+
+  removeView: (id) =>
+    set((s) => ({
+      views: s.views.filter((v) => v.id !== id),
+      activeViewId: s.activeViewId === id ? null : s.activeViewId,
+    })),
+
+  setDefaultView: (id) =>
+    set((s) => ({ views: s.views.map((v) => ({ ...v, isDefault: v.id === id })) })),
 
   onNodesChange: (changes) => set((s) => ({ nodes: applyNodeChanges(changes, s.nodes) })),
   onEdgesChange: (changes) => set((s) => ({ edges: applyEdgeChanges(changes, s.edges) })),
