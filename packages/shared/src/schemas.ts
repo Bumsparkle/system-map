@@ -41,6 +41,15 @@ export const nodeDataSchema = z.object({
   category: z.string().optional(),
   fields: z.record(z.string(), z.string()).default({}),
   color: z.string().optional(),
+  // Per-node customization (spec v1.1 §5)
+  appearance: z
+    .object({
+      accentColor: z.string().optional(),
+      iconKey: z.string().optional(),
+      iconUrl: z.string().optional(),
+      size: z.enum(['sm', 'md', 'lg']).optional(),
+    })
+    .optional(),
 })
 export type NodeData = z.infer<typeof nodeDataSchema>
 

@@ -1,15 +1,24 @@
+import { resolveNodeIcon } from '@/lib/appearance'
 import type { SMNode } from '@/lib/flow'
 import type { NodeProps } from '@xyflow/react'
 import { Server } from 'lucide-react'
 import { BaseNode } from './BaseNode'
 
 export function SystemNode({ id, data, selected }: NodeProps<SMNode>) {
+  const custom = resolveNodeIcon(data)
   return (
-    <BaseNode id={id} layerId={data.layerId} selected={selected} squared>
+    <BaseNode
+      id={id}
+      layerId={data.layerId}
+      selected={selected}
+      squared
+      accentColor={data.appearance?.accentColor}
+      size={data.appearance?.size}
+    >
       <div className="flex items-center gap-2.5">
-        <Server className="h-4 w-4 shrink-0 text-ink-muted" />
+        {custom ?? <Server className="h-4 w-4 shrink-0 text-ink-muted" />}
         <div className="flex min-w-0 flex-col">
-          <span className="font-mono text-[13px] font-medium leading-tight text-ink">
+          <span className="font-mono text-[1em] font-medium leading-tight text-ink">
             {data.label}
           </span>
           {data.category && (

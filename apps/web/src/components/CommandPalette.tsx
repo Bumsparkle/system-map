@@ -175,7 +175,7 @@ export function CommandPalette() {
             return (
               <CommandItem
                 key={`new-${meta.type}`}
-                value={`new ${meta.label} ${meta.hint}`}
+                value={`new-node ${meta.label}`}
                 onSelect={() => run(`new-${meta.type}`, () => newNode(meta.type))}
               >
                 <Plus className="h-3.5 w-3.5 text-ink-subtle" />

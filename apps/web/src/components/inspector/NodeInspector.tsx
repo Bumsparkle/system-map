@@ -7,6 +7,7 @@ import { NODE_TYPE_LABEL } from '@/lib/nodeRegistry'
 import { useDiagramStore } from '@/stores/diagramStore'
 import { Trash2 } from 'lucide-react'
 import type { ReactNode } from 'react'
+import { NodeAppearance } from './NodeAppearance'
 
 function Field({
   label,
@@ -92,6 +93,8 @@ export function NodeInspector({ node }: { node: SMNode }) {
           onChange={(e) => updateNodeData(node.id, { description: e.target.value || undefined })}
         />
       </Field>
+
+      <NodeAppearance node={node} />
     </div>
   )
 }
