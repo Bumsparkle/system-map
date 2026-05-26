@@ -101,6 +101,7 @@ export const vendorCache = pgTable(
     description: text('description'),
     category: text('category'),
     maturity: text('maturity').$type<VendorMaturity>(),
+    wikipediaUrl: text('wikipedia_url'),
     source: text('source').notNull().$type<VendorCacheSource>(),
     fetchedAt: timestamp('fetched_at', { withTimezone: true }).notNull(),
     expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),

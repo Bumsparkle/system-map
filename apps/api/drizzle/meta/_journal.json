@@ -15,6 +15,13 @@
       "when": 1779809750667,
       "tag": "0001_great_vance_astro",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1779811152508,
+      "tag": "0002_shocking_starfox",
+      "breakpoints": true
     }
   ]
 }

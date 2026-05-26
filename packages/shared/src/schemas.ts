@@ -343,6 +343,7 @@ export const vendorLookupSchema = z.object({
   description: z.string().nullable(),
   category: z.string().nullable(),
   maturity: vendorMaturitySchema.nullable(),
+  wikipediaUrl: z.string().nullable(),
   source: vendorLookupSourceSchema,
   fetchedAt: z.string(),
 })

@@ -1,7 +1,10 @@
+import { mkdir } from 'node:fs/promises'
+import fastifyStatic from '@fastify/static'
 import Fastify, { type FastifyError } from 'fastify'
 import { ZodError } from 'zod'
 import { env } from './env'
 import { HttpError } from './lib/errors'
+import { UPLOADS_ROOT } from './lib/paths'
 import corsPlugin from './plugins/cors'
 import { companyRoutes } from './routes/companies'
 import { diagramRoutes } from './routes/diagrams'
@@ -21,6 +24,11 @@ const app = Fastify({
 })
 
 await app.register(corsPlugin)
+
+// Serve mirrored vendor logos (spec v1.2 §2.4). Ensure the dir exists so a fresh
+// checkout doesn't fail registration before any logo has been written.
+await mkdir(UPLOADS_ROOT, { recursive: true })
+await app.register(fastifyStatic, { root: UPLOADS_ROOT, prefix: '/uploads/' })
 
 app.setErrorHandler((err: FastifyError, req, reply) => {
   if (err instanceof ZodError) {

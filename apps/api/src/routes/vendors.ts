@@ -10,12 +10,20 @@ import { nanoid } from 'nanoid'
 import { z } from 'zod'
 import { findVendorMetadata, normaliseVendorQuery } from '../data/vendor-metadata'
 import { db, schema } from '../db/client'
+import { mirrorLogo } from '../lib/logoMirror'
+import { fetchWikipediaSummary } from '../lib/wikipedia'
 
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000
 
 /** Cache key: normalised query with spaces hyphenated (spec §2.2). */
 function cacheKey(q: string): string {
   return normaliseVendorQuery(q).replace(/ /g, '-')
+}
+
+/** Title-case for Wikipedia lookups — its titles only auto-capitalise the first
+ *  letter, so a typed-lowercase "octo telematics" must become "Octo Telematics". */
+function toTitleCase(q: string): string {
+  return q.trim().replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
 type VendorRow = typeof schema.vendorCache.$inferSelect
@@ -28,6 +36,7 @@ function rowToLookup(row: VendorRow, source: VendorLookupSource): VendorLookup {
     description: row.description ?? null,
     category: row.category ?? null,
     maturity: row.maturity ?? null,
+    wikipediaUrl: row.wikipediaUrl ?? null,
     source,
     fetchedAt: row.fetchedAt.toISOString(),
   }
@@ -40,35 +49,45 @@ type Enriched = {
   description: string | null
   category: string | null
   maturity: VendorMaturity | null
+  wikipediaUrl: string | null
   source: VendorCacheSource
 }
 
 /**
- * Resolve a vendor from static metadata. Phase 2 extends this with live
- * Wikipedia + logo.dev enrichment; for now it's static-only / fallback.
- * Must never throw — the lookup endpoint can never produce a broken state.
+ * Resolve a vendor: static metadata for category/maturity/domain, plus live
+ * Wikipedia (description) and logo.dev (mirrored logo), fetched in parallel
+ * with hard timeouts. Must never throw — the lookup endpoint can never produce
+ * a broken state, only a sparser one.
  */
 async function enrichVendor(q: string): Promise<Enriched> {
   const meta = findVendorMetadata(q)
-  if (meta) {
-    return {
-      resolvedName: meta.name,
-      domain: meta.domain,
-      logoUrl: null,
-      description: null,
-      category: meta.category,
-      maturity: meta.maturity,
-      source: 'static-only',
-    }
-  }
+  // Logo domain: static metadata, else a best-effort guess (right ~80% for SaaS).
+  const domain = meta?.domain ?? `${normaliseVendorQuery(q).replace(/ /g, '')}.com`
+  // Wikipedia only for curated vendors with a known-good title, or for unknowns
+  // (title-cased so multi-word names resolve; the helper rejects disambiguation).
+  const wikiQuery = meta ? meta.wikiTitle : toTitleCase(q)
+
+  const [wiki, logoUrl] = await Promise.all([
+    wikiQuery ? fetchWikipediaSummary(wikiQuery) : Promise.resolve(null),
+    mirrorLogo(domain),
+  ])
+
+  const description = wiki?.description ?? null
+  // Best name: curated canonical name, else the resolved Wikipedia title, else the typed text.
+  const resolvedName = meta?.name ?? wiki?.title ?? q.trim()
+  const source: VendorCacheSource =
+    description || logoUrl ? 'live' : meta ? 'static-only' : 'fallback'
+
   return {
-    resolvedName: q.trim(),
-    domain: null,
-    logoUrl: null,
-    description: null,
-    category: null,
-    maturity: null,
-    source: 'fallback',
+    resolvedName,
+    // Only expose a domain we trust: a curated one, or a guess that resolved a logo.
+    domain: meta?.domain ?? (logoUrl ? domain : null),
+    logoUrl,
+    description,
+    category: meta?.category ?? null,
+    maturity: meta?.maturity ?? null,
+    wikipediaUrl: wiki?.pageUrl ?? null,
+    source,
   }
 }
 
@@ -99,6 +118,7 @@ export const vendorRoutes: FastifyPluginAsync = async (app) => {
       description: enriched.description,
       category: enriched.category,
       maturity: enriched.maturity,
+      wikipediaUrl: enriched.wikipediaUrl,
       source: enriched.source,
       fetchedAt: now,
       expiresAt: new Date(now.getTime() + CACHE_TTL_MS),
@@ -118,6 +138,7 @@ export const vendorRoutes: FastifyPluginAsync = async (app) => {
             description: row.description,
             category: row.category,
             maturity: row.maturity,
+            wikipediaUrl: row.wikipediaUrl,
             source: row.source,
             fetchedAt: row.fetchedAt,
             expiresAt: row.expiresAt,

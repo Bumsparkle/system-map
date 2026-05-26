@@ -1,0 +1,1 @@
+ALTER TABLE "vendor_cache" ADD COLUMN "wikipedia_url" text;
