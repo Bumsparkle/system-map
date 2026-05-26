@@ -32,6 +32,7 @@ export function toFlowEdge(e: DiagramEdge): SMEdge {
     sourceHandle: e.sourceHandle ?? undefined,
     targetHandle: e.targetHandle ?? undefined,
     type: e.flowType,
+    label: e.label ?? undefined,
     data: e.data ?? { direction: 'one_way' },
   }
 }

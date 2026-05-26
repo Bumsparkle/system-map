@@ -2,7 +2,7 @@ import { cn } from '@/lib/utils'
 import { useDiagramStore } from '@/stores/diagramStore'
 import { useUiStore } from '@/stores/uiStore'
 import { Handle, Position } from '@xyflow/react'
-import { Fragment, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
 
 const SIDES = [
   ['top', Position.Top],
@@ -49,10 +49,7 @@ export function BaseNode({
       />
       <div className="pl-1">{children}</div>
       {SIDES.map(([side, position]) => (
-        <Fragment key={side}>
-          <Handle id={side} type="target" position={position} />
-          <Handle id={side} type="source" position={position} />
-        </Fragment>
+        <Handle key={side} id={side} type="source" position={position} />
       ))}
     </div>
   )

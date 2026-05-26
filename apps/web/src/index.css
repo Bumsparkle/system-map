@@ -119,3 +119,14 @@
 .react-flow__attribution a {
   color: var(--color-ink-subtle);
 }
+
+/* Animated dashes for api/event/custom flows (spec §6) */
+@keyframes sm-dash {
+  to {
+    stroke-dashoffset: -12;
+  }
+}
+
+.react-flow__edge {
+  cursor: pointer;
+}

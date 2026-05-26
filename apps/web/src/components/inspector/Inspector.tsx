@@ -1,5 +1,6 @@
 import { useDiagramStore } from '@/stores/diagramStore'
 import { DiagramInspector } from './DiagramInspector'
+import { EdgeInspector } from './EdgeInspector'
 import { NodeInspector } from './NodeInspector'
 
 export function Inspector() {
@@ -11,11 +12,15 @@ export function Inspector() {
   const total = selectedNodes.length + selectedEdges.length
   const onlyNode =
     selectedNodes.length === 1 && selectedEdges.length === 0 ? selectedNodes[0] : undefined
+  const onlyEdge =
+    selectedEdges.length === 1 && selectedNodes.length === 0 ? selectedEdges[0] : undefined
 
   return (
     <aside className="flex w-[280px] shrink-0 flex-col border-l border-border bg-surface">
       {onlyNode ? (
         <NodeInspector key={onlyNode.id} node={onlyNode} />
+      ) : onlyEdge ? (
+        <EdgeInspector key={onlyEdge.id} edge={onlyEdge} />
       ) : total > 1 ? (
         <div className="p-4 text-sm text-ink-muted">{total} items selected.</div>
       ) : (

@@ -1,7 +1,16 @@
 import { type SMEdge, type SMNode, toFlowEdge, toFlowNode } from '@/lib/flow'
 import { NODE_DEFAULT_LABEL } from '@/lib/nodeRegistry'
-import type { DiagramDetail, Layer, NodeData, NodeType, View } from '@system-map/shared'
+import type {
+  DiagramDetail,
+  EdgeData,
+  FlowType,
+  Layer,
+  NodeData,
+  NodeType,
+  View,
+} from '@system-map/shared'
 import {
+  type Connection,
   type EdgeChange,
   type NodeChange,
   type XYPosition,
@@ -30,10 +39,16 @@ type DiagramStore = {
 
   onNodesChange: (changes: NodeChange<SMNode>[]) => void
   onEdgesChange: (changes: EdgeChange<SMEdge>[]) => void
+  onConnect: (connection: Connection) => void
 
   addNode: (type: NodeType, position: XYPosition, data?: Partial<NodeData>) => string
   updateNodeData: (id: string, patch: Partial<NodeData>) => void
   removeNode: (id: string) => void
+
+  updateEdgeData: (id: string, patch: Partial<EdgeData>) => void
+  setEdgeFlowType: (id: string, flowType: FlowType) => void
+  setEdgeLabel: (id: string, label: string) => void
+  removeEdge: (id: string) => void
 }
 
 const initialState = {
@@ -76,6 +91,25 @@ export const useDiagramStore = create<DiagramStore>((set, get) => ({
   onNodesChange: (changes) => set((s) => ({ nodes: applyNodeChanges(changes, s.nodes) })),
   onEdgesChange: (changes) => set((s) => ({ edges: applyEdgeChanges(changes, s.edges) })),
 
+  onConnect: (connection) => {
+    const { source, target } = connection
+    if (!source || !target || source === target) return
+    const edge: SMEdge = {
+      id: nanoid(),
+      source,
+      target,
+      sourceHandle: connection.sourceHandle ?? undefined,
+      targetHandle: connection.targetHandle ?? undefined,
+      type: 'data',
+      data: { direction: 'one_way' },
+      selected: true,
+    }
+    set((s) => ({
+      edges: [...s.edges.map((e) => ({ ...e, selected: false })), edge],
+      nodes: s.nodes.map((n) => (n.selected ? { ...n, selected: false } : n)),
+    }))
+  },
+
   addNode: (type, position, data) => {
     const { layers, activeLayerId, nodes } = get()
     const layerId = activeLayerId ?? layers[0]?.id ?? ''
@@ -106,4 +140,23 @@ export const useDiagramStore = create<DiagramStore>((set, get) => ({
       nodes: s.nodes.filter((n) => n.id !== id),
       edges: s.edges.filter((e) => e.source !== id && e.target !== id),
     })),
+
+  updateEdgeData: (id, patch) =>
+    set((s) => ({
+      edges: s.edges.map((e) =>
+        e.id === id ? { ...e, data: { ...(e.data ?? { direction: 'one_way' }), ...patch } } : e,
+      ),
+    })),
+
+  setEdgeFlowType: (id, flowType) =>
+    set((s) => ({
+      edges: s.edges.map((e) => (e.id === id ? { ...e, type: flowType } : e)),
+    })),
+
+  setEdgeLabel: (id, label) =>
+    set((s) => ({
+      edges: s.edges.map((e) => (e.id === id ? { ...e, label: label || undefined } : e)),
+    })),
+
+  removeEdge: (id) => set((s) => ({ edges: s.edges.filter((e) => e.id !== id) })),
 }))
