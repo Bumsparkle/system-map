@@ -13,12 +13,14 @@ import type { CSSProperties, ReactNode } from 'react'
 export type ResolvedEdgeStyle = {
   color: string
   width: number
-  /** Default path routing for this flow type; overridable per-edge via data.routing. */
-  routing: EdgeRouting
   dasharray?: string
   dotted?: boolean
   animated?: boolean
 }
+
+/** Smooth bezier is the default for every flow; a per-edge data.routing override
+ *  (set in the edge inspector) can switch an individual edge to another style. */
+const DEFAULT_ROUTING: EdgeRouting = 'bezier'
 
 type PathParams = Parameters<typeof getSmoothStepPath>[0]
 
@@ -41,25 +43,16 @@ function routedPath(routing: EdgeRouting, p: PathParams): ReturnType<typeof getS
   }
 }
 
-// Per-flow visual style (spec §6). Colors are CSS variables (spec §10) so the
-// palette can be swapped without touching components.
-// Right-angled `smoothstep` reads best for system/data/api/event flows; curvy
-// `bezier` suits the informal, people-driven cash & manual flows (spec v1.1 §6).
+// Per-flow visual style: color (CSS vars, spec §10) + stroke treatment. Path
+// routing is no longer per-flow — every edge defaults to smooth bezier.
 export const EDGE_STYLE: Record<Exclude<FlowType, 'custom'>, ResolvedEdgeStyle> = {
-  data: { color: 'var(--color-flow-data)', width: 2, routing: 'smoothstep' },
-  cash: { color: 'var(--color-flow-cash)', width: 2.5, routing: 'bezier' },
-  api: {
-    color: 'var(--color-flow-api)',
-    width: 2,
-    routing: 'smoothstep',
-    dasharray: '8 4',
-    animated: true,
-  },
-  manual: { color: 'var(--color-flow-manual)', width: 2, routing: 'bezier', dasharray: '4 4' },
+  data: { color: 'var(--color-flow-data)', width: 2 },
+  cash: { color: 'var(--color-flow-cash)', width: 2.5 },
+  api: { color: 'var(--color-flow-api)', width: 2, dasharray: '8 4', animated: true },
+  manual: { color: 'var(--color-flow-manual)', width: 2, dasharray: '4 4' },
   event: {
     color: 'var(--color-flow-event)',
     width: 2,
-    routing: 'smoothstep',
     dasharray: '1.5 4.5',
     dotted: true,
     animated: true,
@@ -113,7 +106,7 @@ export function FlowEdge({
   markerId: string
   children?: ReactNode
 }) {
-  const routing = data?.routing ?? resolved.routing
+  const routing = data?.routing ?? DEFAULT_ROUTING
   const [edgePath, labelX, labelY] = routedPath(routing, {
     sourceX,
     sourceY,

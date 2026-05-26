@@ -6,14 +6,18 @@ import ElkWorker from 'elkjs/lib/elk-worker.min.js?worker'
 
 const elk = new ELK({ workerFactory: () => new ElkWorker() })
 
-// Spec §2: layered, left-to-right, 50px between nodes in a layer, 120px between layers.
+// Layered, left-to-right flow. Brandes–Köpf with BALANCED alignment averages the
+// four alignment passes, so a node sits centred between its branches (symmetric
+// fan-outs read cleanly); model order keeps sibling nodes stably top-to-bottom.
 const LAYOUT_OPTIONS: Record<string, string> = {
   'elk.algorithm': 'layered',
   'elk.direction': 'RIGHT',
-  'elk.layered.spacing.nodeNodeBetweenLayers': '120',
-  'elk.spacing.nodeNode': '50',
+  'elk.layered.spacing.nodeNodeBetweenLayers': '140',
+  'elk.spacing.nodeNode': '64',
   'elk.layered.spacing.edgeNodeBetweenLayers': '40',
   'elk.layered.considerModelOrder.strategy': 'NODES_AND_EDGES',
+  'elk.layered.nodePlacement.strategy': 'BRANDES_KOEPF',
+  'elk.layered.nodePlacement.bk.fixedAlignment': 'BALANCED',
 }
 
 function size(n: Node): { width: number; height: number } {

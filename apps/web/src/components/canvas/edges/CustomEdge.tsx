@@ -8,7 +8,6 @@ export function CustomEdge(props: EdgeProps<SMEdge>) {
   const resolved: ResolvedEdgeStyle = {
     color,
     width: 2,
-    routing: 'bezier',
     dasharray: stroke === 'dashed' ? '6 4' : stroke === 'dotted' ? '1.5 4.5' : undefined,
     dotted: stroke === 'dotted',
     animated: props.data?.animated,
