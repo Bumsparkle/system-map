@@ -1,5 +1,13 @@
-import type { EdgeData, FlowType, NodeData, NodeType, ViewFilter } from '@system-map/shared'
-import { boolean, integer, jsonb, pgTable, real, text, timestamp } from 'drizzle-orm/pg-core'
+import type {
+  EdgeData,
+  FlowType,
+  NodeData,
+  NodeType,
+  VendorCacheSource,
+  VendorMaturity,
+  ViewFilter,
+} from '@system-map/shared'
+import { boolean, index, integer, jsonb, pgTable, real, text, timestamp } from 'drizzle-orm/pg-core'
 
 // TODO(auth): companies are workspaces owned by a single hardcoded user in the MVP.
 // Adding auth later means introducing a `users` table and a `user_id` FK here — a
@@ -79,3 +87,23 @@ export const views = pgTable('views', {
   filter: jsonb('filter').notNull().$type<ViewFilter>(),
   isDefault: boolean('is_default').notNull().default(false),
 })
+
+// Vendor lookup cache (spec v1.2 §2.1). Keyed by normalised query; 7-day TTL.
+// Not a search index — just memoises the Wikipedia/logo enrichment per query.
+export const vendorCache = pgTable(
+  'vendor_cache',
+  {
+    id: text('id').primaryKey(),
+    query: text('query').notNull().unique(),
+    resolvedName: text('resolved_name'),
+    domain: text('domain'),
+    logoUrl: text('logo_url'),
+    description: text('description'),
+    category: text('category'),
+    maturity: text('maturity').$type<VendorMaturity>(),
+    source: text('source').notNull().$type<VendorCacheSource>(),
+    fetchedAt: timestamp('fetched_at', { withTimezone: true }).notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  },
+  (t) => [index('vendor_cache_query_idx').on(t.query)],
+)

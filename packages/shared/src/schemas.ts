@@ -311,3 +311,39 @@ export const saveDiagramInput = z.object({
   views: z.array(saveViewSchema),
 })
 export type SaveDiagramInput = z.infer<typeof saveDiagramInput>
+
+/* ------------------------------------------------------------------ */
+/* Vendor lookup (v1.2)                                                */
+/* ------------------------------------------------------------------ */
+
+export const vendorMaturitySchema = z.enum(['established', 'growth', 'emerging'])
+export type VendorMaturity = z.infer<typeof vendorMaturitySchema>
+
+/** How a cached row was originally sourced (never 'cache' — that's a read-time state). */
+export const vendorCacheSourceSchema = z.enum(['live', 'static-only', 'fallback'])
+export type VendorCacheSource = z.infer<typeof vendorCacheSourceSchema>
+
+/** Source reported on a /lookup response: 'cache' when served from the cache, else the cached row's source. */
+export const vendorLookupSourceSchema = z.enum(['cache', 'live', 'static-only', 'fallback'])
+export type VendorLookupSource = z.infer<typeof vendorLookupSourceSchema>
+
+/** Typeahead suggestion (GET /api/vendors/search) — name + optional category hint. */
+export const vendorSuggestionSchema = z.object({
+  name: z.string(),
+  hint: z.string().optional(),
+  source: z.enum(['cache', 'wikipedia']),
+})
+export type VendorSuggestion = z.infer<typeof vendorSuggestionSchema>
+
+/** Enriched vendor record (GET /api/vendors/lookup). logoUrl is OUR mirrored URL. */
+export const vendorLookupSchema = z.object({
+  name: z.string(),
+  domain: z.string().nullable(),
+  logoUrl: z.string().nullable(),
+  description: z.string().nullable(),
+  category: z.string().nullable(),
+  maturity: vendorMaturitySchema.nullable(),
+  source: vendorLookupSourceSchema,
+  fetchedAt: z.string(),
+})
+export type VendorLookup = z.infer<typeof vendorLookupSchema>

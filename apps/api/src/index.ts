@@ -6,6 +6,7 @@ import corsPlugin from './plugins/cors'
 import { companyRoutes } from './routes/companies'
 import { diagramRoutes } from './routes/diagrams'
 import { saveRoutes } from './routes/save'
+import { vendorRoutes } from './routes/vendors'
 
 const app = Fastify({
   logger:
@@ -40,6 +41,7 @@ app.get('/health', async () => ({ status: 'ok' }))
 await app.register(companyRoutes, { prefix: '/api' })
 await app.register(diagramRoutes, { prefix: '/api' })
 await app.register(saveRoutes, { prefix: '/api' })
+await app.register(vendorRoutes, { prefix: '/api' })
 
 try {
   const address = await app.listen({ port: env.API_PORT, host: '0.0.0.0' })
