@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils'
 import { ArrowLeft } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { DiagramTitle } from './DiagramTitle'
+import { ExportMenu } from './ExportMenu'
 import { LayerPanel } from './LayerPanel'
 import { SaveIndicator } from './SaveIndicator'
 import { ViewSelector } from './ViewSelector'
@@ -21,6 +22,7 @@ export function TopBar() {
       <div className="ml-auto flex items-center gap-3">
         <SaveIndicator />
         <ViewSelector />
+        <ExportMenu />
         <LayerPanel />
       </div>
     </header>
