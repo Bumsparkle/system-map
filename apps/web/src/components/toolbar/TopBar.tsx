@@ -4,6 +4,7 @@ import { ArrowLeft } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { DiagramTitle } from './DiagramTitle'
 import { LayerPanel } from './LayerPanel'
+import { SaveIndicator } from './SaveIndicator'
 import { ViewSelector } from './ViewSelector'
 
 export function TopBar() {
@@ -17,10 +18,10 @@ export function TopBar() {
         <ArrowLeft className="h-4 w-4" />
       </Link>
       <DiagramTitle />
-      <div className="ml-auto flex items-center gap-2">
+      <div className="ml-auto flex items-center gap-3">
+        <SaveIndicator />
         <ViewSelector />
         <LayerPanel />
-        {/* Phase 5: SaveIndicator */}
       </div>
     </header>
   )

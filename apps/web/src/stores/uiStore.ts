@@ -1,5 +1,7 @@
 import { create } from 'zustand'
 
+export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
+
 type UiStore = {
   dotGrid: boolean
   toggleDotGrid: () => void
@@ -8,6 +10,8 @@ type UiStore = {
   // Node briefly flashed after being dropped from the palette (spec §10).
   justAddedNodeId: string | null
   flashNode: (id: string) => void
+  saveStatus: SaveStatus
+  setSaveStatus: (status: SaveStatus) => void
 }
 
 export const useUiStore = create<UiStore>((set) => ({
@@ -22,4 +26,6 @@ export const useUiStore = create<UiStore>((set) => ({
       set((s) => (s.justAddedNodeId === id ? { justAddedNodeId: null } : {}))
     }, 600)
   },
+  saveStatus: 'idle',
+  setSaveStatus: (saveStatus) => set({ saveStatus }),
 }))

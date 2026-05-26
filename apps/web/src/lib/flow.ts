@@ -5,8 +5,12 @@ import type {
   FlowType,
   NodeData,
   NodeType,
+  SaveDiagramInput,
 } from '@system-map/shared'
 import type { Edge, Node } from '@xyflow/react'
+
+type SaveNode = SaveDiagramInput['nodes'][number]
+type SaveEdge = SaveDiagramInput['edges'][number]
 
 /** React Flow node data = domain NodeData plus the owning layer id (for the indicator). */
 export type SMNodeData = NodeData & { layerId: string }
@@ -33,6 +37,34 @@ export function toFlowEdge(e: DiagramEdge): SMEdge {
     targetHandle: e.targetHandle ?? undefined,
     type: e.flowType,
     label: e.label ?? undefined,
+    data: e.data ?? { direction: 'one_way' },
+  }
+}
+
+/** Map a React Flow node back to the bulk-save shape (layerId is a column, not data). */
+export function fromFlowNode(n: SMNode): SaveNode {
+  const { layerId, ...data } = n.data
+  return {
+    id: n.id,
+    layerId,
+    type: n.type ?? 'custom',
+    positionX: n.position.x,
+    positionY: n.position.y,
+    width: n.width ?? null,
+    height: n.height ?? null,
+    data,
+  }
+}
+
+export function fromFlowEdge(e: SMEdge): SaveEdge {
+  return {
+    id: e.id,
+    sourceNodeId: e.source,
+    targetNodeId: e.target,
+    sourceHandle: e.sourceHandle ?? null,
+    targetHandle: e.targetHandle ?? null,
+    flowType: e.type ?? 'data',
+    label: typeof e.label === 'string' ? e.label : null,
     data: e.data ?? { direction: 'one_way' },
   }
 }

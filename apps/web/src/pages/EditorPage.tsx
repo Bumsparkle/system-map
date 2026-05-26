@@ -3,6 +3,7 @@ import { Inspector } from '@/components/inspector/Inspector'
 import { NodePalette } from '@/components/palette/NodePalette'
 import { TopBar } from '@/components/toolbar/TopBar'
 import { buttonVariants } from '@/components/ui/button'
+import { useAutoSave } from '@/hooks/useAutoSave'
 import { useDiagram } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { useDiagramStore } from '@/stores/diagramStore'
@@ -37,6 +38,8 @@ export function EditorPage() {
   }, [detail, hydrate])
 
   useEffect(() => () => reset(), [reset])
+
+  useAutoSave()
 
   if (query.isLoading) return <FullScreen message="Loading diagram…" />
   if (query.isError || !detail) return <FullScreen message="Couldn't load this diagram." withBack />

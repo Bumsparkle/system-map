@@ -281,9 +281,19 @@ export const saveEdgeSchema = z.object({
   data: edgeDataSchema,
 })
 
+export const saveViewSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  filter: viewFilterSchema,
+  isDefault: z.boolean(),
+})
+
 export const saveDiagramInput = z.object({
+  name: z.string().min(1).optional(),
+  description: z.string().nullable().optional(),
   layers: z.array(saveLayerSchema),
   nodes: z.array(saveNodeSchema),
   edges: z.array(saveEdgeSchema),
+  views: z.array(saveViewSchema),
 })
 export type SaveDiagramInput = z.infer<typeof saveDiagramInput>
