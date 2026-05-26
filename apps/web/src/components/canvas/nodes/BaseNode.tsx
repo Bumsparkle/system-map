@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils'
 import { useDiagramStore } from '@/stores/diagramStore'
 import { useUiStore } from '@/stores/uiStore'
 import { Handle, Position } from '@xyflow/react'
-import type { ReactNode } from 'react'
+import { type ReactNode, useState } from 'react'
 
 const SIDES = [
   ['top', Position.Top],
@@ -35,6 +35,7 @@ export function BaseNode({
 }) {
   const layerColor = useDiagramStore((s) => s.layers.find((l) => l.id === layerId)?.color)
   const flashing = useUiStore((s) => s.justAddedNodeId === id)
+  const editing = useUiStore((s) => s.editingNodeId === id)
   const barColor = accentColor ?? layerColor ?? 'transparent'
 
   return (
@@ -57,10 +58,48 @@ export function BaseNode({
         )}
         style={{ backgroundColor: barColor }}
       />
-      <div className="pl-1">{children}</div>
+      <div className="pl-1">{editing ? <NodeLabelEditor id={id} /> : children}</div>
       {SIDES.map(([side, position]) => (
         <Handle key={side} id={side} type="source" position={position} />
       ))}
     </div>
+  )
+}
+
+/** Inline label editor shown on double-click (spec v1.1 §8). Enter commits,
+ *  Escape cancels, blur commits. */
+function NodeLabelEditor({ id }: { id: string }) {
+  const label = useDiagramStore((s) => s.nodes.find((n) => n.id === id)?.data.label ?? '')
+  const updateNodeData = useDiagramStore((s) => s.updateNodeData)
+  const setEditingNode = useUiStore((s) => s.setEditingNode)
+  const [value, setValue] = useState(label)
+
+  function commit() {
+    const next = value.trim()
+    if (next && next !== label) updateNodeData(id, { label: next })
+    setEditingNode(null)
+  }
+
+  return (
+    <input
+      // biome-ignore lint/a11y/noAutofocus: a double-click rename should focus immediately
+      autoFocus
+      value={value}
+      onChange={(e) => setValue(e.target.value)}
+      onFocus={(e) => e.target.select()}
+      onBlur={commit}
+      onPointerDown={(e) => e.stopPropagation()}
+      onKeyDown={(e) => {
+        e.stopPropagation()
+        if (e.key === 'Enter') {
+          e.preventDefault()
+          commit()
+        } else if (e.key === 'Escape') {
+          e.preventDefault()
+          setEditingNode(null)
+        }
+      }}
+      className="nodrag nopan w-full rounded-[4px] border border-accent bg-surface px-1.5 py-0.5 text-[1em] font-medium text-ink focus:outline-none"
+    />
   )
 }

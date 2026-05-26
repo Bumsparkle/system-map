@@ -1,4 +1,5 @@
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
+import { useUrlSync } from '@/hooks/useUrlSync'
 import { buildDisplayGraph } from '@/lib/displayGraph'
 import { DND_MIME } from '@/lib/dnd'
 import { edgeTypes } from '@/lib/edgeRegistry'
@@ -43,10 +44,15 @@ export function Canvas() {
   const hoverNodeId = useUiStore((s) => s.hoverNodeId)
   const setHoverNode = useUiStore((s) => s.setHoverNode)
   const presenting = useUiStore((s) => s.presenting)
+  const highlightOrphans = useUiStore((s) => s.highlightOrphans)
+  const setHighlightOrphans = useUiStore((s) => s.setHighlightOrphans)
+  const setEditingNode = useUiStore((s) => s.setEditingNode)
+  const paletteDragType = useUiStore((s) => s.paletteDragType)
   const { screenToFlowPosition } = useReactFlow()
   const [menu, setMenu] = useState<MenuState | null>(null)
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   useKeyboardShortcuts()
+  useUrlSync()
 
   const activeView = useMemo(
     () => views.find((v) => v.id === activeViewId) ?? null,
@@ -80,22 +86,44 @@ export function Canvas() {
     return { nodeSet, edgeSet }
   }, [focusOrigin, edges])
 
+  // "Find orphans" (spec v1.1 §8): nodes with no incident edge (groups excluded).
+  const orphanIds = useMemo(() => {
+    if (!highlightOrphans) return null
+    const connected = new Set<string>()
+    for (const e of edges) {
+      connected.add(e.source)
+      connected.add(e.target)
+    }
+    const ids = new Set(
+      nodes.filter((n) => n.type !== 'group' && !connected.has(n.id)).map((n) => n.id),
+    )
+    return ids.size > 0 ? ids : null
+  }, [highlightOrphans, nodes, edges])
+
   const rfNodes = useMemo(() => {
+    if (orphanIds) {
+      return display.nodes.map((n) => ({
+        ...n,
+        className: orphanIds.has(n.id) ? 'sm-focused' : 'sm-dimmed',
+      }))
+    }
     if (!focusSets || !focusOrigin) return display.nodes
     return display.nodes.map((n) => ({
       ...n,
       className:
         n.id === focusOrigin ? undefined : focusSets.nodeSet.has(n.id) ? 'sm-focused' : 'sm-dimmed',
     }))
-  }, [display.nodes, focusSets, focusOrigin])
+  }, [display.nodes, focusSets, focusOrigin, orphanIds])
 
   const rfEdges = useMemo(() => {
+    // In orphan mode every edge connects non-orphans, so dim them all.
+    if (orphanIds) return display.edges.map((e) => ({ ...e, className: 'sm-dimmed' }))
     if (!focusSets) return display.edges
     return display.edges.map((e) => ({
       ...e,
       className: focusSets.edgeSet.has(e.id) ? 'sm-focused' : 'sm-dimmed',
     }))
-  }, [display.edges, focusSets])
+  }, [display.edges, focusSets, orphanIds])
 
   const onDragOver = useCallback((event: DragEvent) => {
     event.preventDefault()
@@ -138,8 +166,24 @@ export function Canvas() {
     setHoverNode(null)
   }, [setHoverNode])
 
+  const onNodeDoubleClick = useCallback(
+    (_event: MouseEvent, node: Node) => {
+      if (!presenting) setEditingNode(node.id)
+    },
+    [presenting, setEditingNode],
+  )
+
+  const onPaneClick = useCallback(() => {
+    setMenu(null)
+    setEditingNode(null)
+    if (highlightOrphans) setHighlightOrphans(false)
+  }, [highlightOrphans, setHighlightOrphans, setEditingNode])
+
   return (
-    <div className="h-full w-full" onDrop={onDrop} onDragOver={onDragOver}>
+    <div className="relative h-full w-full" onDrop={onDrop} onDragOver={onDragOver}>
+      {paletteDragType && (
+        <div className="pointer-events-none absolute inset-0 z-10 bg-accent-soft/30 ring-2 ring-inset ring-accent/40" />
+      )}
       <EdgeMarkers />
       <ReactFlow
         nodes={rfNodes}
@@ -153,7 +197,8 @@ export function Canvas() {
         onEdgeContextMenu={onEdgeContextMenu}
         onNodeMouseEnter={onNodeMouseEnter}
         onNodeMouseLeave={onNodeMouseLeave}
-        onPaneClick={() => setMenu(null)}
+        onNodeDoubleClick={onNodeDoubleClick}
+        onPaneClick={onPaneClick}
         fitView
         fitViewOptions={{ padding: 0.3, maxZoom: 1 }}
         minZoom={0.2}

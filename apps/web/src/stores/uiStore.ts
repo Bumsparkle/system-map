@@ -32,6 +32,14 @@ type UiStore = {
   presenting: boolean
   setPresenting: (presenting: boolean) => void
   togglePresenting: () => void
+  // Minor wins (spec v1.1 §8)
+  highlightOrphans: boolean
+  setHighlightOrphans: (on: boolean) => void
+  editingNodeId: string | null
+  setEditingNode: (id: string | null) => void
+  // Node type currently being dragged from the palette (tints the canvas drop zone).
+  paletteDragType: string | null
+  setPaletteDragType: (type: string | null) => void
 }
 
 export const useUiStore = create<UiStore>((set) => ({
@@ -64,4 +72,10 @@ export const useUiStore = create<UiStore>((set) => ({
   presenting: false,
   setPresenting: (presenting) => set({ presenting }),
   togglePresenting: () => set((s) => ({ presenting: !s.presenting })),
+  highlightOrphans: false,
+  setHighlightOrphans: (highlightOrphans) => set({ highlightOrphans }),
+  editingNodeId: null,
+  setEditingNode: (editingNodeId) => set({ editingNodeId }),
+  paletteDragType: null,
+  setPaletteDragType: (paletteDragType) => set({ paletteDragType }),
 }))
