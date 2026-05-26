@@ -7,6 +7,8 @@ type UiStore = {
   toggleDotGrid: () => void
   showMinimap: boolean
   toggleMinimap: () => void
+  paletteCollapsed: boolean
+  togglePalette: () => void
   // Node briefly flashed after being dropped from the palette (spec §10).
   justAddedNodeId: string | null
   flashNode: (id: string) => void
@@ -19,6 +21,8 @@ export const useUiStore = create<UiStore>((set) => ({
   toggleDotGrid: () => set((s) => ({ dotGrid: !s.dotGrid })),
   showMinimap: false,
   toggleMinimap: () => set((s) => ({ showMinimap: !s.showMinimap })),
+  paletteCollapsed: false,
+  togglePalette: () => set((s) => ({ paletteCollapsed: !s.paletteCollapsed })),
   justAddedNodeId: null,
   flashNode: (id) => {
     set({ justAddedNodeId: id })

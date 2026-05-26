@@ -1,3 +1,4 @@
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
 import { buildDisplayGraph } from '@/lib/displayGraph'
 import { DND_MIME } from '@/lib/dnd'
 import { edgeTypes } from '@/lib/edgeRegistry'
@@ -12,6 +13,7 @@ import {
   ConnectionMode,
   type Edge,
   type EdgeChange,
+  MiniMap,
   type NodeChange,
   ReactFlow,
   useReactFlow,
@@ -34,9 +36,11 @@ export function Canvas() {
   const onConnect = useDiagramStore((s) => s.onConnect)
   const addNode = useDiagramStore((s) => s.addNode)
   const dotGrid = useUiStore((s) => s.dotGrid)
+  const showMinimap = useUiStore((s) => s.showMinimap)
   const flashNode = useUiStore((s) => s.flashNode)
   const { screenToFlowPosition } = useReactFlow()
   const [menu, setMenu] = useState<MenuState | null>(null)
+  useKeyboardShortcuts()
 
   const activeView = useMemo(
     () => views.find((v) => v.id === activeViewId) ?? null,
@@ -92,6 +96,7 @@ export function Canvas() {
         selectionKeyCode={null}
         connectionLineStyle={{ stroke: 'var(--color-accent)', strokeWidth: 2 }}
         panOnScroll
+        panActivationKeyCode="Space"
         selectNodesOnDrag={false}
       >
         {dotGrid && (
@@ -100,6 +105,15 @@ export function Canvas() {
             gap={24}
             size={1}
             color="var(--color-border)"
+          />
+        )}
+        {showMinimap && (
+          <MiniMap
+            pannable
+            zoomable
+            className="overflow-hidden rounded-[8px] border border-border !bg-surface shadow-node"
+            maskColor="rgba(20, 20, 20, 0.06)"
+            nodeColor="var(--color-border-strong)"
           />
         )}
         <ZoomControls />

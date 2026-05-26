@@ -24,6 +24,8 @@ export function toFlowNode(n: DiagramNode): SMNode {
     id: n.id,
     type: n.type,
     position: { x: n.positionX, y: n.positionY },
+    ...(n.width != null ? { width: n.width } : {}),
+    ...(n.height != null ? { height: n.height } : {}),
     data: { ...n.data, layerId: n.layerId },
   }
 }

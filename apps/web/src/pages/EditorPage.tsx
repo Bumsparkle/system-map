@@ -34,7 +34,11 @@ export function EditorPage() {
   const reset = useDiagramStore((s) => s.reset)
 
   useEffect(() => {
-    if (detail) hydrate(detail)
+    if (detail) {
+      hydrate(detail)
+      // Clear undo history so the user can't undo back past the loaded diagram.
+      useDiagramStore.temporal.getState().clear()
+    }
   }, [detail, hydrate])
 
   useEffect(() => () => reset(), [reset])

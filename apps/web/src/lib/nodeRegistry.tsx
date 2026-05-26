@@ -1,11 +1,15 @@
 import { AppNode } from '@/components/canvas/nodes/AppNode'
+import { CashNode } from '@/components/canvas/nodes/CashNode'
 import { CategoryGroupNode } from '@/components/canvas/nodes/CategoryGroupNode'
 import { CustomNode } from '@/components/canvas/nodes/CustomNode'
+import { DataSourceNode } from '@/components/canvas/nodes/DataSourceNode'
+import { ExternalEntityNode } from '@/components/canvas/nodes/ExternalEntityNode'
+import { GroupNode } from '@/components/canvas/nodes/GroupNode'
 import { SystemNode } from '@/components/canvas/nodes/SystemNode'
 import type { SMNode } from '@/lib/flow'
 import type { NodeType } from '@system-map/shared'
 import type { NodeProps, NodeTypes } from '@xyflow/react'
-import { AppWindow, Server, Shapes } from 'lucide-react'
+import { AppWindow, Database, Group, PoundSterling, Server, Shapes, Users } from 'lucide-react'
 import type { ComponentType } from 'react'
 
 export type NodeTypeMeta = {
@@ -64,6 +68,46 @@ export const nodeRegistry = {
       hint: 'Internal tool or service',
       category: 'Building blocks',
       icon: Server,
+    },
+  },
+  data_source: {
+    component: DataSourceNode,
+    meta: {
+      type: 'data_source',
+      label: 'Data source',
+      hint: 'DB, CSV feed, API',
+      category: 'Data',
+      icon: Database,
+    },
+  },
+  external_entity: {
+    component: ExternalEntityNode,
+    meta: {
+      type: 'external_entity',
+      label: 'External entity',
+      hint: 'Customer, vendor, partner',
+      category: 'People & orgs',
+      icon: Users,
+    },
+  },
+  cash: {
+    component: CashNode,
+    meta: {
+      type: 'cash',
+      label: 'Cash',
+      hint: 'Revenue or expense',
+      category: 'Money',
+      icon: PoundSterling,
+    },
+  },
+  group: {
+    component: GroupNode,
+    meta: {
+      type: 'group',
+      label: 'Group',
+      hint: 'Container for related nodes',
+      category: 'Layout',
+      icon: Group,
     },
   },
   custom: {

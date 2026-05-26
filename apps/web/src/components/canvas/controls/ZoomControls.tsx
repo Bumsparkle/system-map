@@ -1,7 +1,7 @@
 import { cn } from '@/lib/utils'
 import { useUiStore } from '@/stores/uiStore'
 import { useReactFlow } from '@xyflow/react'
-import { Grid2x2, Maximize, Minus, Plus } from 'lucide-react'
+import { Grid2x2, Map as MapIcon, Maximize, Minus, Plus } from 'lucide-react'
 import type { ReactNode } from 'react'
 
 function CtrlButton({
@@ -35,9 +35,11 @@ export function ZoomControls() {
   const { zoomIn, zoomOut, fitView } = useReactFlow()
   const dotGrid = useUiStore((s) => s.dotGrid)
   const toggleDotGrid = useUiStore((s) => s.toggleDotGrid)
+  const showMinimap = useUiStore((s) => s.showMinimap)
+  const toggleMinimap = useUiStore((s) => s.toggleMinimap)
 
   return (
-    <div className="absolute bottom-4 left-4 z-10 flex items-center gap-0.5 rounded-[8px] border border-border bg-surface p-1 shadow-node">
+    <div className="nopan nodrag absolute bottom-4 left-4 z-10 flex items-center gap-0.5 rounded-[8px] border border-border bg-surface p-1 shadow-node">
       <CtrlButton onClick={() => zoomIn({ duration: 120 })} label="Zoom in">
         <Plus className="h-4 w-4" />
       </CtrlButton>
@@ -50,6 +52,9 @@ export function ZoomControls() {
       <div className="mx-0.5 h-5 w-px bg-border" />
       <CtrlButton onClick={toggleDotGrid} label="Toggle dot grid" active={dotGrid}>
         <Grid2x2 className="h-4 w-4" />
+      </CtrlButton>
+      <CtrlButton onClick={toggleMinimap} label="Toggle minimap" active={showMinimap}>
+        <MapIcon className="h-4 w-4" />
       </CtrlButton>
     </div>
   )

@@ -53,7 +53,10 @@ export function buildDisplayGraph(
     return { nodes: groupByCategory(nodes.filter(isVisible)), edges: displayEdges }
   }
 
-  const displayNodes: Node[] = nodes.map((n) => ({ ...n, hidden: !isVisible(n) }))
+  // Group containers render first so they sit behind the nodes placed over them.
+  const displayNodes: Node[] = nodes
+    .map((n) => ({ ...n, hidden: !isVisible(n) }))
+    .sort((a, b) => Number(b.type === 'group') - Number(a.type === 'group'))
   return { nodes: displayNodes, edges: displayEdges }
 }
 

@@ -3,7 +3,7 @@ import type { NodeTypeMeta } from '@/lib/nodeRegistry'
 import { cn } from '@/lib/utils'
 import { type DragEvent, useState } from 'react'
 
-export function DraggableNodeItem({ meta }: { meta: NodeTypeMeta }) {
+export function DraggableNodeItem({ meta, compact }: { meta: NodeTypeMeta; compact?: boolean }) {
   const [dragging, setDragging] = useState(false)
   const Icon = meta.icon
 
@@ -11,6 +11,23 @@ export function DraggableNodeItem({ meta }: { meta: NodeTypeMeta }) {
     event.dataTransfer.setData(DND_MIME, meta.type)
     event.dataTransfer.effectAllowed = 'move'
     setDragging(true)
+  }
+
+  if (compact) {
+    return (
+      <div
+        draggable
+        onDragStart={onDragStart}
+        onDragEnd={() => setDragging(false)}
+        title={`${meta.label} — ${meta.hint}`}
+        className={cn(
+          'grid h-9 w-9 cursor-grab place-items-center rounded-[6px] border border-transparent text-ink-muted transition-[background-color,border-color,opacity] duration-[120ms] ease-out hover:border-border hover:bg-surface-2 active:cursor-grabbing',
+          dragging && 'opacity-40',
+        )}
+      >
+        <Icon className="h-4 w-4" />
+      </div>
+    )
   }
 
   return (
