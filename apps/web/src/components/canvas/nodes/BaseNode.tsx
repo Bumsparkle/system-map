@@ -34,7 +34,7 @@ export function BaseNode({
   return (
     <div
       className={cn(
-        'group/node relative flex min-w-[160px] flex-col gap-1 overflow-visible border border-border bg-surface px-3.5 py-3 shadow-node transition-[box-shadow,background-color] duration-[120ms] ease-out hover:shadow-node-hover',
+        'sm-node-shell group/node relative flex min-w-[160px] flex-col gap-1 overflow-visible border border-border bg-surface px-3.5 py-3 shadow-node transition-[box-shadow,background-color] duration-[120ms] ease-out hover:shadow-node-hover',
         squared ? 'rounded-[5px]' : 'rounded-[8px]',
         dashed && 'border-dashed border-border-strong',
         selected && 'outline outline-2 outline-offset-2 outline-accent',

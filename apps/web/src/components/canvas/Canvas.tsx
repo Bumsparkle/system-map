@@ -14,11 +14,12 @@ import {
   type Edge,
   type EdgeChange,
   MiniMap,
+  type Node,
   type NodeChange,
   ReactFlow,
   useReactFlow,
 } from '@xyflow/react'
-import { type DragEvent, type MouseEvent, useCallback, useMemo, useState } from 'react'
+import { type DragEvent, type MouseEvent, useCallback, useMemo, useRef, useState } from 'react'
 import { ContextMenu } from './ContextMenu'
 import { ZoomControls } from './controls/ZoomControls'
 import { EdgeMarkers } from './edges/BaseEdge'
@@ -38,8 +39,12 @@ export function Canvas() {
   const dotGrid = useUiStore((s) => s.dotGrid)
   const showMinimap = useUiStore((s) => s.showMinimap)
   const flashNode = useUiStore((s) => s.flashNode)
+  const focusEnabled = useUiStore((s) => s.focusEnabled)
+  const hoverNodeId = useUiStore((s) => s.hoverNodeId)
+  const setHoverNode = useUiStore((s) => s.setHoverNode)
   const { screenToFlowPosition } = useReactFlow()
   const [menu, setMenu] = useState<MenuState | null>(null)
+  const hoverTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   useKeyboardShortcuts()
 
   const activeView = useMemo(
@@ -50,6 +55,46 @@ export function Canvas() {
     () => buildDisplayGraph(nodes, edges, layers, activeView),
     [nodes, edges, layers, activeView],
   )
+
+  // Focus origin = hovered node, or the single selected node when nothing is hovered.
+  const selectedId = useMemo(() => {
+    const sel = nodes.filter((n) => n.selected)
+    return sel.length === 1 ? (sel[0]?.id ?? null) : null
+  }, [nodes])
+  const focusOrigin = focusEnabled ? (hoverNodeId ?? selectedId) : null
+
+  const focusSets = useMemo(() => {
+    if (!focusOrigin) return null
+    const nodeSet = new Set<string>([focusOrigin])
+    const edgeSet = new Set<string>()
+    for (const e of edges) {
+      if (e.source === focusOrigin) {
+        nodeSet.add(e.target)
+        edgeSet.add(e.id)
+      } else if (e.target === focusOrigin) {
+        nodeSet.add(e.source)
+        edgeSet.add(e.id)
+      }
+    }
+    return { nodeSet, edgeSet }
+  }, [focusOrigin, edges])
+
+  const rfNodes = useMemo(() => {
+    if (!focusSets || !focusOrigin) return display.nodes
+    return display.nodes.map((n) => ({
+      ...n,
+      className:
+        n.id === focusOrigin ? undefined : focusSets.nodeSet.has(n.id) ? 'sm-focused' : 'sm-dimmed',
+    }))
+  }, [display.nodes, focusSets, focusOrigin])
+
+  const rfEdges = useMemo(() => {
+    if (!focusSets) return display.edges
+    return display.edges.map((e) => ({
+      ...e,
+      className: focusSets.edgeSet.has(e.id) ? 'sm-focused' : 'sm-dimmed',
+    }))
+  }, [display.edges, focusSets])
 
   const onDragOver = useCallback((event: DragEvent) => {
     event.preventDefault()
@@ -73,12 +118,26 @@ export function Canvas() {
     setMenu({ x: event.clientX, y: event.clientY, edgeId: edge.id })
   }, [])
 
+  const onNodeMouseEnter = useCallback(
+    (_event: MouseEvent, node: Node) => {
+      if (!focusEnabled) return
+      clearTimeout(hoverTimer.current)
+      hoverTimer.current = setTimeout(() => setHoverNode(node.id), 200)
+    },
+    [focusEnabled, setHoverNode],
+  )
+
+  const onNodeMouseLeave = useCallback(() => {
+    clearTimeout(hoverTimer.current)
+    setHoverNode(null)
+  }, [setHoverNode])
+
   return (
     <div className="h-full w-full" onDrop={onDrop} onDragOver={onDragOver}>
       <EdgeMarkers />
       <ReactFlow
-        nodes={display.nodes}
-        edges={display.edges}
+        nodes={rfNodes}
+        edges={rfEdges}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         onNodesChange={(changes) => onNodesChange(changes as NodeChange<SMNode>[])}
@@ -86,6 +145,8 @@ export function Canvas() {
         onConnect={onConnect}
         connectionMode={ConnectionMode.Loose}
         onEdgeContextMenu={onEdgeContextMenu}
+        onNodeMouseEnter={onNodeMouseEnter}
+        onNodeMouseLeave={onNodeMouseLeave}
         onPaneClick={() => setMenu(null)}
         fitView
         fitViewOptions={{ padding: 0.3, maxZoom: 1 }}

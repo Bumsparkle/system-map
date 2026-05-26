@@ -16,6 +16,11 @@ type UiStore = {
   flashNode: (id: string) => void
   saveStatus: SaveStatus
   setSaveStatus: (status: SaveStatus) => void
+  // Focus mode (spec v1.1 §3): dim everything not connected to the focused node.
+  focusEnabled: boolean
+  toggleFocusEnabled: () => void
+  hoverNodeId: string | null
+  setHoverNode: (id: string | null) => void
 }
 
 export const useUiStore = create<UiStore>((set) => ({
@@ -36,4 +41,8 @@ export const useUiStore = create<UiStore>((set) => ({
   },
   saveStatus: 'idle',
   setSaveStatus: (saveStatus) => set({ saveStatus }),
+  focusEnabled: true,
+  toggleFocusEnabled: () => set((s) => ({ focusEnabled: !s.focusEnabled, hoverNodeId: null })),
+  hoverNodeId: null,
+  setHoverNode: (hoverNodeId) => set({ hoverNodeId }),
 }))

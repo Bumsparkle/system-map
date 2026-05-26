@@ -135,3 +135,18 @@
 .sm-animate-nodes .react-flow__node {
   transition: transform 400ms ease;
 }
+
+/* Focus mode (spec v1.1 §3): dim everything not connected to the focused node */
+.react-flow__node,
+.react-flow__edge {
+  transition: opacity 120ms ease-out;
+}
+
+.react-flow__node.sm-dimmed,
+.react-flow__edge.sm-dimmed {
+  opacity: 0.25;
+}
+
+.react-flow__node.sm-focused .sm-node-shell {
+  box-shadow: 0 0 0 1.5px var(--color-accent), var(--shadow-node);
+}

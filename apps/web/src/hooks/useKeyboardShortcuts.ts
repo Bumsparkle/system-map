@@ -1,4 +1,5 @@
 import { useDiagramStore } from '@/stores/diagramStore'
+import { useUiStore } from '@/stores/uiStore'
 import { useReactFlow } from '@xyflow/react'
 import { useHotkeys } from 'react-hotkeys-hook'
 
@@ -8,6 +9,7 @@ import { useHotkeys } from 'react-hotkeys-hook'
 export function useKeyboardShortcuts() {
   const { fitView } = useReactFlow()
   const duplicateSelected = useDiagramStore((s) => s.duplicateSelected)
+  const toggleFocusEnabled = useUiStore((s) => s.toggleFocusEnabled)
 
   useHotkeys('mod+z', () => useDiagramStore.temporal.getState().undo(), { preventDefault: true })
   useHotkeys('mod+shift+z', () => useDiagramStore.temporal.getState().redo(), {
@@ -15,6 +17,7 @@ export function useKeyboardShortcuts() {
   })
   useHotkeys('mod+y', () => useDiagramStore.temporal.getState().redo(), { preventDefault: true })
   useHotkeys('mod+d', () => duplicateSelected(), { preventDefault: true }, [duplicateSelected])
+  useHotkeys('f', () => toggleFocusEnabled(), [toggleFocusEnabled])
   useHotkeys('mod+0', () => fitView({ duration: 200, padding: 0.3 }), { preventDefault: true }, [
     fitView,
   ])
