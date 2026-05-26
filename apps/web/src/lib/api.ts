@@ -6,8 +6,16 @@ import type {
   DiagramDetail,
 } from '@system-map/shared'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { demoCompanies, demoDiagrams, getDemoDiagram } from './demoData'
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3001'
+
+// Backend-less builds (GitHub Pages) set VITE_DEMO=1 to serve static fixtures.
+const DEMO = import.meta.env.VITE_DEMO === '1'
+
+function demoReject<T>(): Promise<T> {
+  return Promise.reject(new ApiError(503, 'This is a read-only demo — changes are not saved.'))
+}
 
 export class ApiError extends Error {
   constructor(
@@ -39,16 +47,25 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
 }
 
 export const api = {
-  listCompanies: () => apiFetch<Company[]>('/api/companies'),
-  createCompany: (input: CreateCompanyInput) =>
-    apiFetch<Company>('/api/companies', { method: 'POST', body: JSON.stringify(input) }),
-  listDiagrams: (companyId: string) => apiFetch<Diagram[]>(`/api/companies/${companyId}/diagrams`),
-  createDiagram: (companyId: string, input: CreateDiagramInput) =>
-    apiFetch<Diagram>(`/api/companies/${companyId}/diagrams`, {
-      method: 'POST',
-      body: JSON.stringify(input),
-    }),
-  getDiagram: (id: string) => apiFetch<DiagramDetail>(`/api/diagrams/${id}`),
+  listCompanies: (): Promise<Company[]> =>
+    DEMO ? Promise.resolve(demoCompanies) : apiFetch<Company[]>('/api/companies'),
+  createCompany: (input: CreateCompanyInput): Promise<Company> =>
+    DEMO
+      ? demoReject<Company>()
+      : apiFetch<Company>('/api/companies', { method: 'POST', body: JSON.stringify(input) }),
+  listDiagrams: (companyId: string): Promise<Diagram[]> =>
+    DEMO
+      ? Promise.resolve(demoDiagrams)
+      : apiFetch<Diagram[]>(`/api/companies/${companyId}/diagrams`),
+  createDiagram: (companyId: string, input: CreateDiagramInput): Promise<Diagram> =>
+    DEMO
+      ? demoReject<Diagram>()
+      : apiFetch<Diagram>(`/api/companies/${companyId}/diagrams`, {
+          method: 'POST',
+          body: JSON.stringify(input),
+        }),
+  getDiagram: (id: string): Promise<DiagramDetail> =>
+    DEMO ? Promise.resolve(getDemoDiagram(id)) : apiFetch<DiagramDetail>(`/api/diagrams/${id}`),
 }
 
 export const qk = {

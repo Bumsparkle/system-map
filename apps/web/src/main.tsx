@@ -18,10 +18,13 @@ const queryClient = new QueryClient({
 const rootEl = document.getElementById('root')
 if (!rootEl) throw new Error('Root element #root not found')
 
+// Matches Vite's base so routing works under the GitHub Pages subpath.
+const basename = import.meta.env.BASE_URL.replace(/\/$/, '')
+
 createRoot(rootEl).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
+      <BrowserRouter basename={basename}>
         <App />
       </BrowserRouter>
     </QueryClientProvider>
