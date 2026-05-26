@@ -6,7 +6,7 @@ import { FLOW_TYPES } from '@/lib/edgeRegistry'
 import type { SMEdge } from '@/lib/flow'
 import { cn } from '@/lib/utils'
 import { useDiagramStore } from '@/stores/diagramStore'
-import type { Direction } from '@system-map/shared'
+import type { Direction, EdgeRouting } from '@system-map/shared'
 import { Trash2 } from 'lucide-react'
 import type { ReactNode } from 'react'
 
@@ -26,6 +26,13 @@ function Field({
 const DIRECTIONS: { value: Direction; label: string }[] = [
   { value: 'one_way', label: 'One-way' },
   { value: 'two_way', label: 'Two-way' },
+]
+
+const ROUTINGS: { value: EdgeRouting; label: string }[] = [
+  { value: 'bezier', label: 'Bezier' },
+  { value: 'smoothstep', label: 'Smoothstep' },
+  { value: 'straight', label: 'Straight' },
+  { value: 'step', label: 'Step' },
 ]
 
 export function EdgeInspector({ edge }: { edge: SMEdge }) {
@@ -104,6 +111,26 @@ export function EdgeInspector({ edge }: { edge: SMEdge }) {
             </button>
           ))}
         </div>
+      </Field>
+
+      <Field label="Style" htmlFor="edge-style">
+        <select
+          id="edge-style"
+          value={edge.data?.routing ?? ''}
+          onChange={(e) =>
+            updateEdgeData(edge.id, {
+              routing: (e.target.value || undefined) as EdgeRouting | undefined,
+            })
+          }
+          className="h-9 w-full rounded-[6px] border border-border bg-surface px-2 text-sm text-ink focus-visible:border-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
+        >
+          <option value="">Default</option>
+          {ROUTINGS.map((r) => (
+            <option key={r.value} value={r.value}>
+              {r.label}
+            </option>
+          ))}
+        </select>
       </Field>
 
       <Field label="Notes" htmlFor="edge-notes">

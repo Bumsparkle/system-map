@@ -1,31 +1,65 @@
 import type { SMEdge } from '@/lib/flow'
-import type { FlowType } from '@system-map/shared'
+import type { EdgeRouting, FlowType } from '@system-map/shared'
 import {
   EdgeLabelRenderer,
   type EdgeProps,
   BaseEdge as RFBaseEdge,
   getBezierPath,
+  getSmoothStepPath,
+  getStraightPath,
 } from '@xyflow/react'
 import type { CSSProperties, ReactNode } from 'react'
 
 export type ResolvedEdgeStyle = {
   color: string
   width: number
+  /** Default path routing for this flow type; overridable per-edge via data.routing. */
+  routing: EdgeRouting
   dasharray?: string
   dotted?: boolean
   animated?: boolean
 }
 
+type PathParams = Parameters<typeof getSmoothStepPath>[0]
+
+/** Resolve an edge's SVG path for the given routing. Returns [path, labelX, labelY, ...]. */
+function routedPath(routing: EdgeRouting, p: PathParams): ReturnType<typeof getSmoothStepPath> {
+  switch (routing) {
+    case 'straight':
+      return getStraightPath({
+        sourceX: p.sourceX,
+        sourceY: p.sourceY,
+        targetX: p.targetX,
+        targetY: p.targetY,
+      })
+    case 'smoothstep':
+      return getSmoothStepPath(p)
+    case 'step':
+      return getSmoothStepPath({ ...p, borderRadius: 0 })
+    default:
+      return getBezierPath(p)
+  }
+}
+
 // Per-flow visual style (spec §6). Colors are CSS variables (spec §10) so the
 // palette can be swapped without touching components.
+// Right-angled `smoothstep` reads best for system/data/api/event flows; curvy
+// `bezier` suits the informal, people-driven cash & manual flows (spec v1.1 §6).
 export const EDGE_STYLE: Record<Exclude<FlowType, 'custom'>, ResolvedEdgeStyle> = {
-  data: { color: 'var(--color-flow-data)', width: 2 },
-  cash: { color: 'var(--color-flow-cash)', width: 2.5 },
-  api: { color: 'var(--color-flow-api)', width: 2, dasharray: '8 4', animated: true },
-  manual: { color: 'var(--color-flow-manual)', width: 2, dasharray: '4 4' },
+  data: { color: 'var(--color-flow-data)', width: 2, routing: 'smoothstep' },
+  cash: { color: 'var(--color-flow-cash)', width: 2.5, routing: 'bezier' },
+  api: {
+    color: 'var(--color-flow-api)',
+    width: 2,
+    routing: 'smoothstep',
+    dasharray: '8 4',
+    animated: true,
+  },
+  manual: { color: 'var(--color-flow-manual)', width: 2, routing: 'bezier', dasharray: '4 4' },
   event: {
     color: 'var(--color-flow-event)',
     width: 2,
+    routing: 'smoothstep',
     dasharray: '1.5 4.5',
     dotted: true,
     animated: true,
@@ -79,7 +113,8 @@ export function FlowEdge({
   markerId: string
   children?: ReactNode
 }) {
-  const [edgePath, labelX, labelY] = getBezierPath({
+  const routing = data?.routing ?? resolved.routing
+  const [edgePath, labelX, labelY] = routedPath(routing, {
     sourceX,
     sourceY,
     targetX,

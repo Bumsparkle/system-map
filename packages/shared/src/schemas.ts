@@ -27,6 +27,9 @@ export type Direction = z.infer<typeof directionSchema>
 export const strokeStyleSchema = z.enum(['solid', 'dashed', 'dotted'])
 export type StrokeStyle = z.infer<typeof strokeStyleSchema>
 
+export const edgeRoutingSchema = z.enum(['bezier', 'smoothstep', 'straight', 'step'])
+export type EdgeRouting = z.infer<typeof edgeRoutingSchema>
+
 export const groupBySchema = z.enum(['category', 'layer'])
 export type GroupBy = z.infer<typeof groupBySchema>
 
@@ -58,6 +61,8 @@ export const edgeDataSchema = z.object({
   frequency: z.string().optional(),
   volume: z.string().optional(),
   notes: z.string().optional(),
+  // Per-edge path-routing override; falls back to the flow-type default (spec v1.1 §6)
+  routing: edgeRoutingSchema.optional(),
   // custom flow overrides
   color: z.string().optional(),
   strokeStyle: strokeStyleSchema.optional(),
