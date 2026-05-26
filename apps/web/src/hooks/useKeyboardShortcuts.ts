@@ -11,6 +11,19 @@ export function useKeyboardShortcuts() {
   const duplicateSelected = useDiagramStore((s) => s.duplicateSelected)
   const toggleFocusEnabled = useUiStore((s) => s.toggleFocusEnabled)
   const setCommandOpen = useUiStore((s) => s.setCommandOpen)
+  const presenting = useUiStore((s) => s.presenting)
+  const togglePresenting = useUiStore((s) => s.togglePresenting)
+  const setPresenting = useUiStore((s) => s.setPresenting)
+
+  // Presentation mode (spec v1.1 §7): toggle with ⌘⇧P, exit with Esc.
+  useHotkeys('mod+shift+p', () => togglePresenting(), { preventDefault: true }, [togglePresenting])
+  useHotkeys(
+    'escape',
+    () => {
+      if (presenting) setPresenting(false)
+    },
+    [presenting, setPresenting],
+  )
 
   useHotkeys('mod+z', () => useDiagramStore.temporal.getState().undo(), { preventDefault: true })
   useHotkeys('mod+shift+z', () => useDiagramStore.temporal.getState().redo(), {

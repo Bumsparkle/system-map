@@ -1,5 +1,6 @@
 import { CommandPalette } from '@/components/CommandPalette'
 import { Canvas } from '@/components/canvas/Canvas'
+import { PresentationChrome } from '@/components/canvas/PresentationChrome'
 import { Inspector } from '@/components/inspector/Inspector'
 import { NodePalette } from '@/components/palette/NodePalette'
 import { TopBar } from '@/components/toolbar/TopBar'
@@ -8,6 +9,7 @@ import { useAutoSave } from '@/hooks/useAutoSave'
 import { useDiagram } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { useDiagramStore } from '@/stores/diagramStore'
+import { useUiStore } from '@/stores/uiStore'
 import { ReactFlowProvider } from '@xyflow/react'
 import { ArrowLeft } from 'lucide-react'
 import { useEffect } from 'react'
@@ -49,19 +51,26 @@ export function EditorPage() {
   if (query.isLoading) return <FullScreen message="Loading diagram…" />
   if (query.isError || !detail) return <FullScreen message="Couldn't load this diagram." withBack />
 
+  return <Editor />
+}
+
+function Editor() {
+  const presenting = useUiStore((s) => s.presenting)
+
   return (
     <ReactFlowProvider>
       <div className="flex h-full flex-col">
-        <TopBar />
+        {!presenting && <TopBar />}
         <div className="flex min-h-0 flex-1">
-          <NodePalette />
+          {!presenting && <NodePalette />}
           <div className="relative min-w-0 flex-1">
             <Canvas />
+            {presenting && <PresentationChrome />}
           </div>
-          <Inspector />
+          {!presenting && <Inspector />}
         </div>
       </div>
-      <CommandPalette />
+      {!presenting && <CommandPalette />}
     </ReactFlowProvider>
   )
 }

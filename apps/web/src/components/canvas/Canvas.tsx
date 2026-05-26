@@ -42,6 +42,7 @@ export function Canvas() {
   const focusEnabled = useUiStore((s) => s.focusEnabled)
   const hoverNodeId = useUiStore((s) => s.hoverNodeId)
   const setHoverNode = useUiStore((s) => s.setHoverNode)
+  const presenting = useUiStore((s) => s.presenting)
   const { screenToFlowPosition } = useReactFlow()
   const [menu, setMenu] = useState<MenuState | null>(null)
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
@@ -104,19 +105,24 @@ export function Canvas() {
   const onDrop = useCallback(
     (event: DragEvent) => {
       event.preventDefault()
+      if (presenting) return
       const type = event.dataTransfer.getData(DND_MIME) as NodeType
       if (!type) return
       const position = screenToFlowPosition({ x: event.clientX, y: event.clientY })
       const id = addNode(type, { x: position.x - 80, y: position.y - 20 })
       flashNode(id)
     },
-    [screenToFlowPosition, addNode, flashNode],
+    [screenToFlowPosition, addNode, flashNode, presenting],
   )
 
-  const onEdgeContextMenu = useCallback((event: MouseEvent, edge: Edge) => {
-    event.preventDefault()
-    setMenu({ x: event.clientX, y: event.clientY, edgeId: edge.id })
-  }, [])
+  const onEdgeContextMenu = useCallback(
+    (event: MouseEvent, edge: Edge) => {
+      event.preventDefault()
+      if (presenting) return
+      setMenu({ x: event.clientX, y: event.clientY, edgeId: edge.id })
+    },
+    [presenting],
+  )
 
   const onNodeMouseEnter = useCallback(
     (_event: MouseEvent, node: Node) => {
@@ -152,7 +158,9 @@ export function Canvas() {
         fitViewOptions={{ padding: 0.3, maxZoom: 1 }}
         minZoom={0.2}
         maxZoom={2}
-        deleteKeyCode={['Backspace', 'Delete']}
+        nodesDraggable={!presenting}
+        nodesConnectable={!presenting}
+        deleteKeyCode={presenting ? null : ['Backspace', 'Delete']}
         multiSelectionKeyCode={['Meta', 'Shift']}
         selectionKeyCode={null}
         connectionLineStyle={{ stroke: 'var(--color-accent)', strokeWidth: 2 }}
@@ -177,7 +185,7 @@ export function Canvas() {
             nodeColor="var(--color-border-strong)"
           />
         )}
-        <ZoomControls />
+        {!presenting && <ZoomControls />}
       </ReactFlow>
       {menu && (
         <ContextMenu x={menu.x} y={menu.y} edgeId={menu.edgeId} onClose={() => setMenu(null)} />

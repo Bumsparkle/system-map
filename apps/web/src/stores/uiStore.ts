@@ -31,6 +31,7 @@ type UiStore = {
   // Presentation mode (spec v1.1 §7)
   presenting: boolean
   setPresenting: (presenting: boolean) => void
+  togglePresenting: () => void
 }
 
 export const useUiStore = create<UiStore>((set) => ({
@@ -62,4 +63,5 @@ export const useUiStore = create<UiStore>((set) => ({
   clearSaveViewRequest: () => set({ saveViewRequested: false }),
   presenting: false,
   setPresenting: (presenting) => set({ presenting }),
+  togglePresenting: () => set((s) => ({ presenting: !s.presenting })),
 }))
