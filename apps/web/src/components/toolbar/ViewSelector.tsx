@@ -14,6 +14,7 @@ import { FLOW_TYPES } from '@/lib/edgeRegistry'
 import { NODE_TYPE_LABEL } from '@/lib/nodeRegistry'
 import { cn } from '@/lib/utils'
 import { useDiagramStore } from '@/stores/diagramStore'
+import { useUiStore } from '@/stores/uiStore'
 import type { FlowType, NodeType, ViewFilter } from '@system-map/shared'
 import { Check, ChevronDown, Plus, Star, Trash2 } from 'lucide-react'
 import { type FormEvent, type ReactNode, useEffect, useMemo, useState } from 'react'
@@ -26,7 +27,17 @@ export function ViewSelector() {
   const setActiveView = useDiagramStore((s) => s.setActiveView)
   const removeView = useDiagramStore((s) => s.removeView)
   const setDefaultView = useDiagramStore((s) => s.setDefaultView)
+  const saveViewRequested = useUiStore((s) => s.saveViewRequested)
+  const clearSaveViewRequest = useUiStore((s) => s.clearSaveViewRequest)
   const [saveOpen, setSaveOpen] = useState(false)
+
+  // The command palette ("Save view as…") can request this dialog from afar.
+  useEffect(() => {
+    if (saveViewRequested) {
+      setSaveOpen(true)
+      clearSaveViewRequest()
+    }
+  }, [saveViewRequested, clearSaveViewRequest])
 
   const activeView = views.find((v) => v.id === activeViewId) ?? null
   const triggerLabel = activeView?.name ?? 'All layers'

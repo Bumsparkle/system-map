@@ -62,6 +62,7 @@ type DiagramStore = {
   removeNode: (id: string) => void
   duplicateSelected: () => void
   applyLayout: (positions: Record<string, { x: number; y: number }>) => void
+  selectNode: (id: string) => void
 
   updateEdgeData: (id: string, patch: Partial<EdgeData>) => void
   setEdgeFlowType: (id: string, flowType: FlowType) => void
@@ -301,6 +302,14 @@ export const useDiagramStore = create<DiagramStore>()(
             const p = positions[n.id]
             return p ? { ...n, position: p } : n
           }),
+        })),
+
+      selectNode: (id) =>
+        set((s) => ({
+          nodes: s.nodes.map((n) =>
+            n.selected === (n.id === id) ? n : { ...n, selected: n.id === id },
+          ),
+          edges: s.edges.map((e) => (e.selected ? { ...e, selected: false } : e)),
         })),
     }),
     {

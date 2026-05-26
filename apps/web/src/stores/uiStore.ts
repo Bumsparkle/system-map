@@ -21,6 +21,16 @@ type UiStore = {
   toggleFocusEnabled: () => void
   hoverNodeId: string | null
   setHoverNode: (id: string | null) => void
+  // Command palette (spec v1.1 §4)
+  commandOpen: boolean
+  setCommandOpen: (open: boolean) => void
+  // Cross-component request to open the "Save view" dialog (from the command palette)
+  saveViewRequested: boolean
+  requestSaveView: () => void
+  clearSaveViewRequest: () => void
+  // Presentation mode (spec v1.1 §7)
+  presenting: boolean
+  setPresenting: (presenting: boolean) => void
 }
 
 export const useUiStore = create<UiStore>((set) => ({
@@ -45,4 +55,11 @@ export const useUiStore = create<UiStore>((set) => ({
   toggleFocusEnabled: () => set((s) => ({ focusEnabled: !s.focusEnabled, hoverNodeId: null })),
   hoverNodeId: null,
   setHoverNode: (hoverNodeId) => set({ hoverNodeId }),
+  commandOpen: false,
+  setCommandOpen: (commandOpen) => set({ commandOpen }),
+  saveViewRequested: false,
+  requestSaveView: () => set({ saveViewRequested: true }),
+  clearSaveViewRequest: () => set({ saveViewRequested: false }),
+  presenting: false,
+  setPresenting: (presenting) => set({ presenting }),
 }))

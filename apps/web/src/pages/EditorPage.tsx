@@ -1,3 +1,4 @@
+import { CommandPalette } from '@/components/CommandPalette'
 import { Canvas } from '@/components/canvas/Canvas'
 import { Inspector } from '@/components/inspector/Inspector'
 import { NodePalette } from '@/components/palette/NodePalette'
@@ -60,6 +61,7 @@ export function EditorPage() {
           <Inspector />
         </div>
       </div>
+      <CommandPalette />
     </ReactFlowProvider>
   )
 }
