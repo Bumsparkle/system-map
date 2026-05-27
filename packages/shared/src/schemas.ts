@@ -46,6 +46,23 @@ export type NodeLifecycle = z.infer<typeof nodeLifecycleSchema>
 export const edgeLifecycleSchema = z.enum(['existing', 'new', 'retiring'])
 export type EdgeLifecycle = z.infer<typeof edgeLifecycleSchema>
 
+// Cost data (spec v1.3 §2.2). Amount stored in minor units (pence/cents) to
+// avoid float bugs; formatted on display.
+export const currencySchema = z.enum(['GBP', 'USD', 'EUR'])
+export type Currency = z.infer<typeof currencySchema>
+
+export const costConfidenceSchema = z.enum(['known', 'estimated', 'unknown'])
+export type CostConfidence = z.infer<typeof costConfidenceSchema>
+
+export const nodeCostSchema = z.object({
+  monthlyAmount: z.number().int(), // minor units (pence/cents)
+  currency: currencySchema,
+  basis: z.string().optional(),
+  notes: z.string().optional(),
+  confidence: costConfidenceSchema,
+})
+export type NodeCost = z.infer<typeof nodeCostSchema>
+
 /* ------------------------------------------------------------------ */
 /* JSONB payload shapes                                                */
 /* ------------------------------------------------------------------ */
@@ -86,6 +103,8 @@ export const nodeDataSchema = z.object({
   lifecycle: nodeLifecycleSchema.optional(),
   replacedByNodeId: z.string().optional(),
   lifecycleNotes: z.string().optional(),
+  // Monthly cost (spec v1.3 §2.2). Optional — not every node has a cost.
+  cost: nodeCostSchema.optional(),
 })
 export type NodeData = z.infer<typeof nodeDataSchema>
 

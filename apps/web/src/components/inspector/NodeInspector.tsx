@@ -7,6 +7,7 @@ import { NODE_TYPE_LABEL } from '@/lib/nodeRegistry'
 import { useDiagramStore } from '@/stores/diagramStore'
 import { Trash2 } from 'lucide-react'
 import type { ReactNode } from 'react'
+import { CostSection } from './CostSection'
 import { LifecycleSection } from './LifecycleSection'
 import { NodeAppearance } from './NodeAppearance'
 import { VendorSection } from './VendorSection'
@@ -99,6 +100,8 @@ export function NodeInspector({ node }: { node: SMNode }) {
       {node.type === 'app' && <VendorSection node={node} />}
 
       <LifecycleSection node={node} />
+
+      <CostSection node={node} />
 
       <NodeAppearance node={node} />
     </div>
