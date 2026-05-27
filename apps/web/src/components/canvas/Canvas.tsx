@@ -22,6 +22,7 @@ import {
 } from '@xyflow/react'
 import { type DragEvent, type MouseEvent, useCallback, useMemo, useRef, useState } from 'react'
 import { ContextMenu } from './ContextMenu'
+import { CostTotalsBar } from './CostTotalsBar'
 import { ZoomControls } from './controls/ZoomControls'
 import { EdgeMarkers } from './edges/BaseEdge'
 
@@ -264,6 +265,7 @@ export function Canvas() {
       {menu && (
         <ContextMenu x={menu.x} y={menu.y} edgeId={menu.edgeId} onClose={() => setMenu(null)} />
       )}
+      <CostTotalsBar />
     </div>
   )
 }

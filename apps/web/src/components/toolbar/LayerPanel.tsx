@@ -1,12 +1,17 @@
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { formatAmount, layerCostMinor } from '@/lib/cost'
 import { cn } from '@/lib/utils'
 import { useDiagramStore } from '@/stores/diagramStore'
+import { useUiStore } from '@/stores/uiStore'
 import { ChevronDown, ChevronUp, Eye, EyeOff, Layers, Plus, Trash2 } from 'lucide-react'
 import { useMemo } from 'react'
 
 export function LayerPanel() {
   const layersRaw = useDiagramStore((s) => s.layers)
+  const nodes = useDiagramStore((s) => s.nodes)
+  const diagramState = useUiStore((s) => s.diagramState)
+  const currency = nodes.find((n) => n.data.cost)?.data.cost?.currency ?? 'GBP'
   const activeLayerId = useDiagramStore((s) => s.activeLayerId)
   const addLayer = useDiagramStore((s) => s.addLayer)
   const updateLayer = useDiagramStore((s) => s.updateLayer)
@@ -71,6 +76,14 @@ export function LayerPanel() {
                 onChange={(e) => updateLayer(layer.id, { name: e.target.value })}
                 className="min-w-0 flex-1 bg-transparent text-sm text-ink focus:outline-none"
               />
+              {(() => {
+                const minor = layerCostMinor(nodes, layer.id, diagramState)
+                return minor > 0 ? (
+                  <span className="shrink-0 font-mono text-[11px] text-ink-muted">
+                    {formatAmount(minor, currency)}/mo
+                  </span>
+                ) : null
+              })()}
               <button
                 type="button"
                 onClick={() => toggleLayerVisible(layer.id)}

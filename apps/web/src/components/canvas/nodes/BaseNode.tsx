@@ -1,4 +1,5 @@
 import { type NodeSize, sizeStyle } from '@/lib/appearance'
+import { formatCostCompact } from '@/lib/cost'
 import { LIFECYCLE_DELTA } from '@/lib/lifecycle'
 import { cn } from '@/lib/utils'
 import { useDiagramStore } from '@/stores/diagramStore'
@@ -40,6 +41,7 @@ export function BaseNode({
   // Delta view: re-skin the node by its lifecycle (spec v1.3 §3.3).
   const delta = useUiStore((s) => s.diagramState === 'delta')
   const lifecycle = useDiagramStore((s) => s.nodes.find((n) => n.id === id)?.data.lifecycle)
+  const cost = useDiagramStore((s) => s.nodes.find((n) => n.id === id)?.data.cost)
   const lc = delta ? LIFECYCLE_DELTA[lifecycle ?? 'existing'] : null
   const barColor = lc?.bar ?? accentColor ?? layerColor ?? 'transparent'
 
@@ -72,6 +74,11 @@ export function BaseNode({
         </span>
       )}
       <div className="pl-1">{editing ? <NodeLabelEditor id={id} /> : children}</div>
+      {cost && (
+        <div className="pl-1 font-mono text-[11px] leading-none text-ink-muted">
+          {formatCostCompact(cost)}
+        </div>
+      )}
       {SIDES.map(([side, position]) => (
         <Handle key={side} id={side} type="source" position={position} />
       ))}
