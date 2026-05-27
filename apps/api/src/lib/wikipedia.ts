@@ -37,3 +37,22 @@ export async function fetchWikipediaSummary(title: string): Promise<WikiSummary 
     return null
   }
 }
+
+/**
+ * Wikipedia OpenSearch — fast prefix/fuzzy title suggestions for the typeahead
+ * (spec v1.2 §2.2). Returns matching article titles (no descriptions/logos).
+ */
+export async function fetchWikipediaOpenSearch(q: string, limit: number): Promise<string[]> {
+  const url = `https://en.wikipedia.org/w/api.php?action=opensearch&search=${encodeURIComponent(q)}&limit=${limit}&format=json`
+  try {
+    const res = await fetch(url, {
+      signal: AbortSignal.timeout(WIKI_TIMEOUT_MS),
+      headers: { 'User-Agent': 'SystemMap/1.0 (vendor-lookup demo)' },
+    })
+    if (!res.ok) return []
+    const json = (await res.json()) as [string, string[], string[], string[]]
+    return Array.isArray(json?.[1]) ? json[1] : []
+  } catch {
+    return []
+  }
+}
