@@ -8,6 +8,7 @@ import { useDiagramStore } from '@/stores/diagramStore'
 import { Trash2 } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { NodeAppearance } from './NodeAppearance'
+import { VendorSection } from './VendorSection'
 
 function Field({
   label,
@@ -93,6 +94,8 @@ export function NodeInspector({ node }: { node: SMNode }) {
           onChange={(e) => updateNodeData(node.id, { description: e.target.value || undefined })}
         />
       </Field>
+
+      {node.type === 'app' && <VendorSection node={node} />}
 
       <NodeAppearance node={node} />
     </div>

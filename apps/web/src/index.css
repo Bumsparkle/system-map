@@ -150,3 +150,23 @@
 .react-flow__node.sm-focused .sm-node-shell {
   box-shadow: 0 0 0 1.5px var(--color-accent), var(--shadow-node);
 }
+
+/* Skeleton shimmer for the vendor-loading state (spec v1.2 §4.2/§5) */
+@keyframes sm-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+.sm-shimmer {
+  background-image: linear-gradient(
+    90deg,
+    var(--color-surface-2) 25%,
+    var(--color-border) 50%,
+    var(--color-surface-2) 75%
+  );
+  background-size: 200% 100%;
+  animation: sm-shimmer 1.2s ease-in-out infinite;
+}

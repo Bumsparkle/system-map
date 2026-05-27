@@ -245,6 +245,8 @@ export const useDiagramStore = create<DiagramStore>()(
           data: {
             label: data?.label ?? NODE_DEFAULT_LABEL[type],
             fields: {},
+            // A freshly-dropped App node opens straight into vendor search (spec v1.2 §4.2).
+            ...(type === 'app' ? { awaitingVendor: true } : {}),
             ...data,
             layerId,
           },

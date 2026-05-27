@@ -40,6 +40,9 @@ type UiStore = {
   // Node type currently being dragged from the palette (tints the canvas drop zone).
   paletteDragType: string | null
   setPaletteDragType: (type: string | null) => void
+  // App nodes whose vendor lookup is in flight — drives the shimmer (spec v1.2 §4.2).
+  vendorLoadingIds: string[]
+  setVendorLoading: (id: string, loading: boolean) => void
 }
 
 export const useUiStore = create<UiStore>((set) => ({
@@ -78,4 +81,13 @@ export const useUiStore = create<UiStore>((set) => ({
   setEditingNode: (editingNodeId) => set({ editingNodeId }),
   paletteDragType: null,
   setPaletteDragType: (paletteDragType) => set({ paletteDragType }),
+  vendorLoadingIds: [],
+  setVendorLoading: (id, loading) =>
+    set((s) => ({
+      vendorLoadingIds: loading
+        ? s.vendorLoadingIds.includes(id)
+          ? s.vendorLoadingIds
+          : [...s.vendorLoadingIds, id]
+        : s.vendorLoadingIds.filter((x) => x !== id),
+    })),
 }))

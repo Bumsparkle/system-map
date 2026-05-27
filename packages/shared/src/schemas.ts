@@ -53,6 +53,22 @@ export const nodeDataSchema = z.object({
       size: z.enum(['sm', 'md', 'lg']).optional(),
     })
     .optional(),
+  // Vendor lookup (spec v1.2). A freshly-dropped App node awaits a vendor pick;
+  // once chosen, the enriched record is stored here and mirrored to label/category.
+  awaitingVendor: z.boolean().optional(),
+  vendor: z
+    .object({
+      name: z.string(),
+      domain: z.string().nullable().optional(),
+      logoUrl: z.string().nullable().optional(),
+      description: z.string().nullable().optional(),
+      category: z.string().nullable().optional(),
+      maturity: z.enum(['established', 'growth', 'emerging']).nullable().optional(),
+      wikipediaUrl: z.string().nullable().optional(),
+      source: z.enum(['cache', 'live', 'static-only', 'fallback']).optional(),
+      fetchedAt: z.string().optional(),
+    })
+    .optional(),
 })
 export type NodeData = z.infer<typeof nodeDataSchema>
 

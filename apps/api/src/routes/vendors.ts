@@ -92,9 +92,13 @@ async function enrichVendor(q: string): Promise<Enriched> {
   }
 }
 
-/** Full lookup: cache-first, else enrich + write-through. Reused by /lookup and
- *  /cache/warm. Never throws on enrichment; cache writes are best-effort. */
-async function resolveVendor(q: string, log: FastifyBaseLogger): Promise<VendorLookup> {
+/** Full lookup: cache-first (unless `force`), else enrich + write-through. Reused
+ *  by /lookup and /cache/warm. Never throws on enrichment; writes are best-effort. */
+async function resolveVendor(
+  q: string,
+  log: FastifyBaseLogger,
+  force = false,
+): Promise<VendorLookup> {
   const key = cacheKey(q)
 
   const [cached] = await db
@@ -102,7 +106,7 @@ async function resolveVendor(q: string, log: FastifyBaseLogger): Promise<VendorL
     .from(schema.vendorCache)
     .where(eq(schema.vendorCache.query, key))
     .limit(1)
-  if (cached && cached.expiresAt > new Date()) return rowToLookup(cached, 'cache')
+  if (!force && cached && cached.expiresAt > new Date()) return rowToLookup(cached, 'cache')
 
   const enriched = await enrichVendor(q)
   const now = new Date()
@@ -185,7 +189,7 @@ async function searchVendors(q: string): Promise<VendorSuggestion[]> {
   return out.slice(0, 8)
 }
 
-const lookupQuery = z.object({ q: z.string().min(1).max(120) })
+const lookupQuery = z.object({ q: z.string().min(1).max(120), fresh: z.string().optional() })
 const searchQuery = z.object({ q: z.string().min(1).max(120) })
 const warmBody = z.object({ queries: z.array(z.string().min(1).max(120)).max(200) })
 
@@ -193,8 +197,8 @@ export const vendorRoutes: FastifyPluginAsync = async (app) => {
   // GET /api/vendors/lookup?q= — full enriched record (cache-first). Never 4xx/5xx
   // beyond a missing query param; enrichment failures degrade to a sparse node.
   app.get('/vendors/lookup', async (req) => {
-    const { q } = lookupQuery.parse(req.query)
-    return resolveVendor(q, req.log)
+    const { q, fresh } = lookupQuery.parse(req.query)
+    return resolveVendor(q, req.log, fresh === '1')
   })
 
   // GET /api/vendors/search?q= — fast typeahead suggestions (cache-first).
