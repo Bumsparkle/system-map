@@ -1,8 +1,11 @@
 import type {
   Direction,
   EdgeData,
+  EdgeLifecycle,
   FlowType,
+  NodeCost,
   NodeData,
+  NodeLifecycle,
   NodeType,
   VendorLookup,
 } from '@system-map/shared'
@@ -10,30 +13,20 @@ import { eq } from 'drizzle-orm'
 import { db, queryClient, schema } from './client'
 
 /**
- * Seed the "Project Atlantic" demo diagram (spec v1.2 §6): a Lloyd's syndicate
- * target operating model with a painful Current state and a modern Future state
- * on two toggleable layers. App nodes are enriched live via /api/vendors/lookup
- * so logos bake into the node data — run AFTER the API is up (and after a
- * logo.dev token is set, for logos):
+ * Seed the "Project Atlantic" demo diagram (spec v1.3 §6): a Lloyd's syndicate
+ * target operating model as ONE diagram with per-node lifecycle + monthly cost.
+ * The Current/Future/Delta toggle drives state — no separate state layers.
+ * App nodes enrich live via /api/vendors/lookup, so logos bake into the node
+ * data. Run after the API is up (and a logo.dev token is set, for logos):
  *   pnpm --filter @system-map/api db:seed:atlantic
  */
 
 const API = process.env.API_URL ?? 'http://localhost:3001'
 const COMPANY_ID = 'demo-co'
 const DIAGRAM_ID = 'project-atlantic'
-const L_CURRENT = 'l-atl-current'
-const L_FUTURE = 'l-atl-future'
-
-const ALL_FLOWS: FlowType[] = ['data', 'cash', 'api', 'manual', 'event', 'custom']
-const ALL_NODE_TYPES: NodeType[] = [
-  'app',
-  'system',
-  'data_source',
-  'external_entity',
-  'cash',
-  'group',
-  'custom',
-]
+const L_CORE = 'l-atl-core'
+const L_UW = 'l-atl-uw'
+const L_DATA = 'l-atl-data'
 
 async function lookup(q: string): Promise<VendorLookup | null> {
   try {
@@ -45,6 +38,24 @@ async function lookup(q: string): Promise<VendorLookup | null> {
   }
 }
 
+const gbp = (
+  pounds: number,
+  confidence: NodeCost['confidence'] = 'known',
+  basis?: string,
+): NodeCost => ({
+  monthlyAmount: pounds * 100,
+  currency: 'GBP',
+  confidence,
+  ...(basis ? { basis } : {}),
+})
+
+type Extra = {
+  lifecycle?: NodeLifecycle
+  cost?: NodeCost
+  notes?: string
+  replacedByNodeId?: string
+}
+
 type PlainNode = {
   id: string
   layerId: string
@@ -54,13 +65,13 @@ type PlainNode = {
   data: NodeData
 }
 
-// A vendor-backed App node: enrich live, embed the lookup on the node.
 async function appNode(
   id: string,
   layerId: string,
   query: string,
   x: number,
   y: number,
+  extra: Extra,
 ): Promise<PlainNode> {
   const v = await lookup(query)
   const data: NodeData = {
@@ -68,6 +79,7 @@ async function appNode(
     fields: {},
     ...(v?.category ? { category: v.category } : {}),
     vendor: v ?? { name: query },
+    ...extra,
   }
   return { id, layerId, type: 'app', x, y, data }
 }
@@ -79,9 +91,17 @@ function plainNode(
   label: string,
   x: number,
   y: number,
-  category?: string,
+  category: string | undefined,
+  extra: Extra,
 ): PlainNode {
-  return { id, layerId, type, x, y, data: { label, fields: {}, ...(category ? { category } : {}) } }
+  return {
+    id,
+    layerId,
+    type,
+    x,
+    y,
+    data: { label, fields: {}, ...(category ? { category } : {}), ...extra },
+  }
 }
 
 type SeedEdge = {
@@ -90,6 +110,7 @@ type SeedEdge = {
   target: string
   flowType: FlowType
   label: string
+  lifecycle: EdgeLifecycle
 }
 const edge = (
   id: string,
@@ -97,16 +118,10 @@ const edge = (
   target: string,
   flowType: FlowType,
   label: string,
-): SeedEdge => ({
-  id,
-  source,
-  target,
-  flowType,
-  label,
-})
+  lifecycle: EdgeLifecycle,
+): SeedEdge => ({ id, source, target, flowType, label, lifecycle })
 
 async function main() {
-  // Idempotent: drop and rebuild just this diagram (cascades layers/nodes/edges/views).
   await db.delete(schema.diagrams).where(eq(schema.diagrams.id, DIAGRAM_ID))
 
   await db.insert(schema.diagrams).values({
@@ -116,47 +131,89 @@ async function main() {
     description: "Lloyd's syndicate target operating model — current vs. future state.",
   })
 
+  // Functional layers (state is per-node, not per-layer).
   await db.insert(schema.layers).values([
     {
-      id: L_CURRENT,
+      id: L_CORE,
       diagramId: DIAGRAM_ID,
-      name: 'Current state',
-      color: '#94918A',
+      name: 'Core platform',
+      color: '#475569',
       order: 0,
       visible: true,
     },
     {
-      id: L_FUTURE,
+      id: L_UW,
       diagramId: DIAGRAM_ID,
-      name: 'Future state',
-      color: '#047857',
+      name: 'Underwriting & claims',
+      color: '#b45309',
       order: 1,
+      visible: true,
+    },
+    {
+      id: L_DATA,
+      diagramId: DIAGRAM_ID,
+      name: 'Data & distribution',
+      color: '#047857',
+      order: 2,
       visible: true,
     },
   ])
 
-  // Current state — legacy core, manual underwriting, broken integrations.
-  const current: PlainNode[] = [
-    plainNode('atl-broker-c', L_CURRENT, 'external_entity', 'Brokers', 20, 60, 'Distribution'),
-    plainNode('atl-excel', L_CURRENT, 'custom', 'Excel + email', 300, 60, 'Manual underwriting'),
-    plainNode('atl-sharedrive', L_CURRENT, 'data_source', 'Shared drive', 580, 150, 'Documents'),
-    plainNode('atl-mainframe', L_CURRENT, 'system', 'Mainframe', 860, 30, 'Legacy core'),
-    await appNode('atl-sapiens', L_CURRENT, 'sapiens', 580, 20),
+  const nodes: PlainNode[] = [
+    // Distribution
+    plainNode('atl-brokers', L_DATA, 'external_entity', 'Brokers', 40, 220, 'Distribution', {
+      lifecycle: 'existing',
+    }),
+    await appNode('atl-salesforce', L_DATA, 'salesforce', 40, 380, {
+      lifecycle: 'existing',
+      cost: gbp(2000, 'known', 'Broker portal'),
+      notes: 'Broker portal — stays.',
+    }),
+    await appNode('atl-snowflake', L_DATA, 'snowflake', 900, 220, {
+      lifecycle: 'modifying',
+      cost: gbp(1500, 'known'),
+      notes: 'Scaling for new data sources.',
+    }),
+
+    // Underwriting & claims
+    await appNode('atl-excel', L_UW, 'microsoft 365', 320, 70, {
+      lifecycle: 'retiring',
+      cost: gbp(200, 'known', 'Excel + M365 licences'),
+      notes: 'Spreadsheet pricing — retired in favour of hyperexponential.',
+    }),
+    await appNode('atl-send', L_UW, 'send', 320, 210, {
+      lifecycle: 'new',
+      cost: gbp(6000, 'estimated'),
+      notes: 'Underwriter workbench.',
+    }),
+    plainNode('atl-claims', L_UW, 'custom', 'Manual claims', 320, 360, 'Claims handlers', {
+      lifecycle: 'existing',
+    }),
+    await appNode('atl-shift', L_UW, 'shift technology', 320, 510, {
+      lifecycle: 'new',
+      cost: gbp(3000, 'estimated'),
+      notes: 'Claims fraud detection.',
+    }),
+    await appNode('atl-hx', L_UW, 'hyperexponential', 600, 430, {
+      lifecycle: 'new',
+      cost: gbp(8000, 'estimated'),
+      notes: 'Pricing & rating.',
+    }),
+
+    // Core platform — the replacement chain
+    await appNode('atl-sapiens', L_CORE, 'sapiens', 600, 100, {
+      lifecycle: 'replacing',
+      replacedByNodeId: 'atl-guidewire',
+      cost: gbp(4000, 'known'),
+      notes: 'Legacy policy admin — being replaced by Guidewire.',
+    }),
+    await appNode('atl-guidewire', L_CORE, 'guidewire', 600, 250, {
+      lifecycle: 'new',
+      cost: gbp(12000, 'estimated'),
+      notes: 'Modern policy admin core.',
+    }),
   ]
 
-  // Future state — modern integrated stack.
-  const future: PlainNode[] = [
-    plainNode('atl-broker-f', L_FUTURE, 'external_entity', 'Brokers', 20, 500, 'Distribution'),
-    await appNode('atl-send', L_FUTURE, 'send', 300, 480),
-    await appNode('atl-cytora', L_FUTURE, 'cytora', 300, 620),
-    await appNode('atl-hx', L_FUTURE, 'hyperexponential', 580, 420),
-    await appNode('atl-guidewire', L_FUTURE, 'guidewire', 580, 540),
-    await appNode('atl-shift', L_FUTURE, 'shift technology', 580, 660),
-    await appNode('atl-snowflake', L_FUTURE, 'snowflake', 860, 500),
-    await appNode('atl-aws', L_FUTURE, 'aws', 1120, 500),
-  ]
-
-  const nodes = [...current, ...future]
   await db.insert(schema.nodes).values(
     nodes.map((n) => ({
       id: n.id,
@@ -169,21 +226,20 @@ async function main() {
     })),
   )
 
-  const oneWay: EdgeData = { direction: 'one_way' as Direction }
+  const oneWay: Direction = 'one_way'
   const edges: SeedEdge[] = [
-    // Current — manual, brittle.
-    edge('atl-e1', 'atl-broker-c', 'atl-excel', 'manual', 'submissions'),
-    edge('atl-e2', 'atl-excel', 'atl-sapiens', 'manual', 'rekey'),
-    edge('atl-e3', 'atl-excel', 'atl-sharedrive', 'manual', 'docs'),
-    edge('atl-e4', 'atl-sapiens', 'atl-mainframe', 'data', 'nightly batch'),
-    // Future — integrated, typed.
-    edge('atl-e5', 'atl-broker-f', 'atl-send', 'api', 'submissions'),
-    edge('atl-e6', 'atl-cytora', 'atl-send', 'data', 'risk data'),
-    edge('atl-e7', 'atl-send', 'atl-hx', 'api', 'price'),
-    edge('atl-e8', 'atl-send', 'atl-guidewire', 'api', 'bind'),
-    edge('atl-e9', 'atl-shift', 'atl-guidewire', 'event', 'fraud signal'),
-    edge('atl-e10', 'atl-guidewire', 'atl-snowflake', 'data', 'policies'),
-    edge('atl-e11', 'atl-snowflake', 'atl-aws', 'data', 'warehoused'),
+    // Current-state flows (hidden in Future once their legacy endpoints drop out).
+    edge('atl-e1', 'atl-brokers', 'atl-sapiens', 'manual', 'submissions', 'existing'),
+    edge('atl-e2', 'atl-excel', 'atl-sapiens', 'manual', 'rates', 'retiring'),
+    edge('atl-e3', 'atl-claims', 'atl-sapiens', 'manual', 'claims', 'retiring'),
+    edge('atl-e4', 'atl-sapiens', 'atl-snowflake', 'data', 'policies', 'existing'),
+    edge('atl-e5', 'atl-salesforce', 'atl-brokers', 'api', 'portal', 'existing'),
+    // Future-state flows (new integrations).
+    edge('atl-e6', 'atl-brokers', 'atl-send', 'api', 'submissions', 'new'),
+    edge('atl-e7', 'atl-send', 'atl-hx', 'api', 'price', 'new'),
+    edge('atl-e8', 'atl-send', 'atl-guidewire', 'api', 'bind', 'new'),
+    edge('atl-e9', 'atl-shift', 'atl-guidewire', 'event', 'fraud signal', 'new'),
+    edge('atl-e10', 'atl-guidewire', 'atl-snowflake', 'data', 'policies', 'new'),
   ]
   await db.insert(schema.edges).values(
     edges.map((e) => ({
@@ -193,30 +249,13 @@ async function main() {
       targetNodeId: e.target,
       flowType: e.flowType,
       label: e.label,
-      data: oneWay,
+      data: { direction: oneWay, lifecycle: e.lifecycle } satisfies EdgeData,
     })),
   )
 
-  await db.insert(schema.views).values([
-    {
-      id: 'v-atl-current',
-      diagramId: DIAGRAM_ID,
-      name: 'Current state',
-      filter: { layerIds: [L_CURRENT], flowTypes: ALL_FLOWS, nodeTypes: ALL_NODE_TYPES },
-      isDefault: true,
-    },
-    {
-      id: 'v-atl-future',
-      diagramId: DIAGRAM_ID,
-      name: 'Future state',
-      filter: { layerIds: [L_FUTURE], flowTypes: ALL_FLOWS, nodeTypes: ALL_NODE_TYPES },
-      isDefault: false,
-    },
-  ])
-
-  const withLogos = nodes.filter((n) => n.data.vendor?.logoUrl).length
+  const logos = nodes.filter((n) => n.data.vendor?.logoUrl).length
   console.log(
-    `Seeded "Project Atlantic": ${nodes.length} nodes, ${edges.length} edges, 2 layers/views (${withLogos} logos).`,
+    `Seeded "Project Atlantic": ${nodes.length} nodes, ${edges.length} edges, 3 layers, lifecycle + costs (${logos} logos).`,
   )
 }
 
