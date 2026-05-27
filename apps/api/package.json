@@ -12,6 +12,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
     "db:seed": "tsx src/db/seed.ts",
+    "db:seed:atlantic": "tsx src/db/seedAtlantic.ts",
     "warm": "tsx src/scripts/warmCache.ts"
   },
   "dependencies": {
