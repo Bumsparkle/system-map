@@ -6,6 +6,11 @@ export type VendorMetadata = {
   category: string
   maturity: VendorMaturity
   aliases?: string[]
+  // Explicit Wikipedia article title. Only set where the plain name resolves
+  // correctly to the company — many vendor names hit a disambiguation page or
+  // an unrelated article (e.g. "Cytora" is a snail), so we only fetch Wikipedia
+  // when we know the right title. Absent ⇒ skip Wikipedia for this vendor.
+  wikiTitle?: string
 }
 
 // Hand-curated vendor taxonomy (spec v1.2 §3). The category strings mirror a
@@ -20,6 +25,7 @@ export const VENDOR_METADATA: Record<string, VendorMetadata> = {
     category: 'Policy Admin',
     maturity: 'established',
     aliases: ['guidewire software'],
+    wikiTitle: 'Guidewire Software',
   },
   'duck creek': {
     name: 'Duck Creek',
@@ -121,12 +127,14 @@ export const VENDOR_METADATA: Record<string, VendorMetadata> = {
     domain: 'snowflake.com',
     category: 'Data & Analytics',
     maturity: 'established',
+    wikiTitle: 'Snowflake Inc.',
   },
   databricks: {
     name: 'Databricks',
     domain: 'databricks.com',
     category: 'Data & Analytics',
     maturity: 'established',
+    wikiTitle: 'Databricks',
   },
 
   // Cloud / Infra + Productivity (horizontals)
@@ -136,12 +144,215 @@ export const VENDOR_METADATA: Record<string, VendorMetadata> = {
     category: 'Cloud / Infra',
     maturity: 'established',
     aliases: ['amazon web services'],
+    wikiTitle: 'Amazon Web Services',
   },
   salesforce: {
     name: 'Salesforce',
     domain: 'salesforce.com',
     category: 'Productivity',
     maturity: 'established',
+    wikiTitle: 'Salesforce',
+  },
+
+  // Policy Admin / Core Systems (more)
+  'eis group': {
+    name: 'EIS Group',
+    domain: 'eisgroup.com',
+    category: 'Policy Admin',
+    maturity: 'established',
+    aliases: ['eis'],
+  },
+  instanda: {
+    name: 'INSTANDA',
+    domain: 'instanda.com',
+    category: 'Policy Admin',
+    maturity: 'growth',
+  },
+
+  // Underwriter Workbench (more)
+  'atticus.ai': {
+    name: 'Atticus.ai',
+    domain: 'atticus.ai',
+    category: 'Underwriter Workbench',
+    maturity: 'emerging',
+    aliases: ['atticus'],
+  },
+  quotech: {
+    name: 'Quotech',
+    domain: 'quotech.io',
+    category: 'Underwriter Workbench',
+    maturity: 'emerging',
+  },
+
+  // Claims (more)
+  claimvantage: {
+    name: 'ClaimVantage',
+    domain: 'claimvantage.com',
+    category: 'Claims',
+    maturity: 'growth',
+  },
+
+  // Distribution / Broker tech + Lloyd's-specific
+  whitespace: {
+    name: 'Whitespace',
+    domain: 'whitespace.co',
+    category: "Distribution · Lloyd's",
+    maturity: 'growth',
+    aliases: ['whitespace software'],
+  },
+  ppl: {
+    name: 'PPL',
+    domain: 'pplfirst.com',
+    category: "Distribution · Lloyd's",
+    maturity: 'established',
+    aliases: ['placing platform', 'placing platform limited'],
+  },
+  acturis: {
+    name: 'Acturis',
+    domain: 'acturis.com',
+    category: 'Distribution',
+    maturity: 'established',
+  },
+  'applied systems': {
+    name: 'Applied Systems',
+    domain: 'appliedsystems.com',
+    category: 'Distribution',
+    maturity: 'established',
+  },
+  vertafore: {
+    name: 'Vertafore',
+    domain: 'vertafore.com',
+    category: 'Distribution',
+    maturity: 'established',
+  },
+  novidea: { name: 'Novidea', domain: 'novidea.com', category: 'Distribution', maturity: 'growth' },
+  dxc: {
+    name: 'DXC Technology',
+    domain: 'dxc.com',
+    category: "Distribution · Lloyd's",
+    maturity: 'established',
+    aliases: ['dxc technology'],
+    wikiTitle: 'DXC Technology',
+  },
+
+  // Pricing & Rating (more)
+  earnix: {
+    name: 'Earnix',
+    domain: 'earnix.com',
+    category: 'Pricing & Rating',
+    maturity: 'growth',
+  },
+  quantee: {
+    name: 'Quantee',
+    domain: 'quantee.com',
+    category: 'Pricing & Rating',
+    maturity: 'emerging',
+  },
+
+  // Data & Analytics (more)
+  'dbt labs': {
+    name: 'dbt Labs',
+    domain: 'getdbt.com',
+    category: 'Data & Analytics',
+    maturity: 'growth',
+    aliases: ['dbt'],
+  },
+  fivetran: {
+    name: 'Fivetran',
+    domain: 'fivetran.com',
+    category: 'Data & Analytics',
+    maturity: 'growth',
+    wikiTitle: 'Fivetran',
+  },
+  looker: {
+    name: 'Looker',
+    domain: 'looker.com',
+    category: 'Data & Analytics',
+    maturity: 'established',
+    wikiTitle: 'Looker (company)',
+  },
+
+  // Cloud / Infra (more)
+  azure: {
+    name: 'Microsoft Azure',
+    domain: 'azure.microsoft.com',
+    category: 'Cloud / Infra',
+    maturity: 'established',
+    aliases: ['microsoft azure'],
+    wikiTitle: 'Microsoft Azure',
+  },
+  gcp: {
+    name: 'Google Cloud',
+    domain: 'cloud.google.com',
+    category: 'Cloud / Infra',
+    maturity: 'established',
+    aliases: ['google cloud', 'google cloud platform'],
+    wikiTitle: 'Google Cloud Platform',
+  },
+  cloudflare: {
+    name: 'Cloudflare',
+    domain: 'cloudflare.com',
+    category: 'Cloud / Infra',
+    maturity: 'established',
+    wikiTitle: 'Cloudflare',
+  },
+
+  // Productivity (more)
+  'microsoft 365': {
+    name: 'Microsoft 365',
+    domain: 'microsoft.com',
+    category: 'Productivity',
+    maturity: 'established',
+    aliases: ['office 365', 'm365', 'microsoft office'],
+  },
+  slack: {
+    name: 'Slack',
+    domain: 'slack.com',
+    category: 'Productivity',
+    maturity: 'established',
+    wikiTitle: 'Slack (software)',
+  },
+  zoom: {
+    name: 'Zoom',
+    domain: 'zoom.us',
+    category: 'Productivity',
+    maturity: 'established',
+    aliases: ['zoom video'],
+  },
+  docusign: {
+    name: 'DocuSign',
+    domain: 'docusign.com',
+    category: 'Productivity',
+    maturity: 'established',
+    wikiTitle: 'DocuSign',
+  },
+
+  // Compliance / Risk
+  onetrust: {
+    name: 'OneTrust',
+    domain: 'onetrust.com',
+    category: 'Compliance / Risk',
+    maturity: 'growth',
+  },
+  servicenow: {
+    name: 'ServiceNow',
+    domain: 'servicenow.com',
+    category: 'Compliance / Risk',
+    maturity: 'established',
+    aliases: ['servicenow grc'],
+    wikiTitle: 'ServiceNow',
+  },
+  resolver: {
+    name: 'Resolver',
+    domain: 'resolver.com',
+    category: 'Compliance / Risk',
+    maturity: 'growth',
+  },
+  logicgate: {
+    name: 'LogicGate',
+    domain: 'logicgate.com',
+    category: 'Compliance / Risk',
+    maturity: 'growth',
   },
 }
 
