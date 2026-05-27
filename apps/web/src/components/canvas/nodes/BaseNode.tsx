@@ -1,4 +1,5 @@
 import { type NodeSize, sizeStyle } from '@/lib/appearance'
+import { LIFECYCLE_DELTA } from '@/lib/lifecycle'
 import { cn } from '@/lib/utils'
 import { useDiagramStore } from '@/stores/diagramStore'
 import { useUiStore } from '@/stores/uiStore'
@@ -36,11 +37,15 @@ export function BaseNode({
   const layerColor = useDiagramStore((s) => s.layers.find((l) => l.id === layerId)?.color)
   const flashing = useUiStore((s) => s.justAddedNodeId === id)
   const editing = useUiStore((s) => s.editingNodeId === id)
-  const barColor = accentColor ?? layerColor ?? 'transparent'
+  // Delta view: re-skin the node by its lifecycle (spec v1.3 §3.3).
+  const delta = useUiStore((s) => s.diagramState === 'delta')
+  const lifecycle = useDiagramStore((s) => s.nodes.find((n) => n.id === id)?.data.lifecycle)
+  const lc = delta ? LIFECYCLE_DELTA[lifecycle ?? 'existing'] : null
+  const barColor = lc?.bar ?? accentColor ?? layerColor ?? 'transparent'
 
   return (
     <div
-      style={sizeStyle(size)}
+      style={{ ...sizeStyle(size), ...(lc ? { opacity: lc.opacity } : {}) }}
       className={cn(
         'sm-node-shell group/node relative flex flex-col gap-1 overflow-visible border border-border bg-surface px-3.5 py-3 shadow-node transition-[box-shadow,background-color] duration-[120ms] ease-out hover:shadow-node-hover',
         squared ? 'rounded-[5px]' : 'rounded-[8px]',
@@ -58,6 +63,14 @@ export function BaseNode({
         )}
         style={{ backgroundColor: barColor }}
       />
+      {lc?.label && (
+        <span
+          className="absolute -top-2 right-1.5 rounded-[3px] bg-surface px-1 py-0.5 text-[9px] font-semibold uppercase tracking-wide shadow-node"
+          style={{ color: lc.bar ?? 'var(--color-ink-muted)' }}
+        >
+          {lc.label}
+        </span>
+      )}
       <div className="pl-1">{editing ? <NodeLabelEditor id={id} /> : children}</div>
       {SIDES.map(([side, position]) => (
         <Handle key={side} id={side} type="source" position={position} />

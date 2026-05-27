@@ -116,15 +116,43 @@ export function Canvas() {
     }))
   }, [display.nodes, focusSets, focusOrigin, orphanIds])
 
+  // Delta view only: a dashed grey "replaces" arrow from each replacing node to
+  // its replacement (spec v1.3 §3.3). Synthetic — never stored in the DB.
+  const replacesEdges = useMemo<Edge[]>(() => {
+    if (diagramState !== 'delta') return []
+    const visible = new Set(display.nodes.filter((n) => !n.hidden).map((n) => n.id))
+    return nodes
+      .filter(
+        (n) =>
+          n.data.lifecycle === 'replacing' &&
+          n.data.replacedByNodeId &&
+          visible.has(n.id) &&
+          visible.has(n.data.replacedByNodeId),
+      )
+      .map((n) => ({
+        id: `__replaces_${n.id}`,
+        source: n.id,
+        target: n.data.replacedByNodeId as string,
+        type: 'custom',
+        label: 'replaces',
+        data: { direction: 'one_way', color: 'var(--color-ink-subtle)', strokeStyle: 'dashed' },
+        selectable: false,
+        deletable: false,
+      }))
+  }, [diagramState, nodes, display.nodes])
+
   const rfEdges = useMemo(() => {
     // In orphan mode every edge connects non-orphans, so dim them all.
-    if (orphanIds) return display.edges.map((e) => ({ ...e, className: 'sm-dimmed' }))
-    if (!focusSets) return display.edges
-    return display.edges.map((e) => ({
-      ...e,
-      className: focusSets.edgeSet.has(e.id) ? 'sm-focused' : 'sm-dimmed',
-    }))
-  }, [display.edges, focusSets, orphanIds])
+    let styled: Edge[]
+    if (orphanIds) styled = display.edges.map((e) => ({ ...e, className: 'sm-dimmed' }))
+    else if (!focusSets) styled = display.edges
+    else
+      styled = display.edges.map((e) => ({
+        ...e,
+        className: focusSets.edgeSet.has(e.id) ? 'sm-focused' : 'sm-dimmed',
+      }))
+    return replacesEdges.length ? [...styled, ...replacesEdges] : styled
+  }, [display.edges, focusSets, orphanIds, replacesEdges])
 
   const onDragOver = useCallback((event: DragEvent) => {
     event.preventDefault()
