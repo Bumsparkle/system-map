@@ -2,6 +2,9 @@ import { create } from 'zustand'
 
 export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 
+/** Current/future-state view toggle (spec v1.3 §3). */
+export type DiagramStateView = 'current' | 'future' | 'delta'
+
 type UiStore = {
   dotGrid: boolean
   toggleDotGrid: () => void
@@ -43,6 +46,9 @@ type UiStore = {
   // App nodes whose vendor lookup is in flight — drives the shimmer (spec v1.2 §4.2).
   vendorLoadingIds: string[]
   setVendorLoading: (id: string, loading: boolean) => void
+  // Current/future-state toggle (spec v1.3 §3). Persisted per-diagram by useUrlSync.
+  diagramState: DiagramStateView
+  setDiagramState: (state: DiagramStateView) => void
 }
 
 export const useUiStore = create<UiStore>((set) => ({
@@ -90,4 +96,6 @@ export const useUiStore = create<UiStore>((set) => ({
           : [...s.vendorLoadingIds, id]
         : s.vendorLoadingIds.filter((x) => x !== id),
     })),
+  diagramState: 'current',
+  setDiagramState: (diagramState) => set({ diagramState }),
 }))

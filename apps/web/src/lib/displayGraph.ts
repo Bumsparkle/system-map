@@ -1,5 +1,6 @@
 import type { SMEdge, SMNode } from '@/lib/flow'
-import type { Layer, View } from '@system-map/shared'
+import type { DiagramStateView } from '@/stores/uiStore'
+import type { EdgeLifecycle, Layer, NodeLifecycle, View } from '@system-map/shared'
 import type { Edge, Node } from '@xyflow/react'
 
 // Layout constants for the groupBy:'category' render trick.
@@ -27,25 +28,44 @@ export function makeVisibilityPredicate(layers: Layer[], view: View | null) {
   }
 }
 
+/** Is a node visible in the given state view (spec v1.3 §3.1–3.3)? Delta shows all. */
+export function nodeInState(lifecycle: NodeLifecycle, state: DiagramStateView): boolean {
+  if (state === 'delta') return true
+  if (state === 'current') return lifecycle !== 'new'
+  return lifecycle !== 'retiring' && lifecycle !== 'replacing' // future
+}
+
+function edgeInState(lifecycle: EdgeLifecycle | undefined, state: DiagramStateView): boolean {
+  if (state === 'delta' || !lifecycle) return true
+  if (state === 'current') return lifecycle !== 'new'
+  return lifecycle !== 'retiring' // future
+}
+
 /**
  * Produces the nodes/edges actually rendered, applying (1) layer visibility,
- * (2) the active view's filters, and (3) the optional category grouping. The
- * canonical store graph is never mutated — this is a pure display transform.
+ * (2) the active view's filters, (3) the current/future-state toggle, and
+ * (4) the optional category grouping. The canonical store graph is never
+ * mutated — this is a pure display transform.
  */
 export function buildDisplayGraph(
   nodes: SMNode[],
   edges: SMEdge[],
   layers: Layer[],
   view: View | null,
+  state: DiagramStateView = 'current',
 ): { nodes: Node[]; edges: Edge[] } {
-  const isVisible = makeVisibilityPredicate(layers, view)
+  const layerVisible = makeVisibilityPredicate(layers, view)
+  const isVisible = (n: SMNode): boolean =>
+    layerVisible(n) && nodeInState(n.data.lifecycle ?? 'existing', state)
   const visibleIds = new Set(nodes.filter(isVisible).map((n) => n.id))
   const viewFlowTypes = view ? new Set(view.filter.flowTypes) : null
 
   const displayEdges: Edge[] = edges.map((e) => {
-    // An edge hides if either endpoint is hidden, or its flow type is filtered out.
+    // An edge hides if either endpoint is hidden, its flow type is filtered out,
+    // or its own lifecycle is excluded by the active state.
     let hidden = !visibleIds.has(e.source) || !visibleIds.has(e.target)
     if (!hidden && viewFlowTypes && e.type && !viewFlowTypes.has(e.type)) hidden = true
+    if (!hidden && !edgeInState(e.data?.lifecycle, state)) hidden = true
     return { ...e, hidden }
   })
 

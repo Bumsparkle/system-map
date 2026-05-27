@@ -48,6 +48,7 @@ export function Canvas() {
   const setHighlightOrphans = useUiStore((s) => s.setHighlightOrphans)
   const setEditingNode = useUiStore((s) => s.setEditingNode)
   const paletteDragType = useUiStore((s) => s.paletteDragType)
+  const diagramState = useUiStore((s) => s.diagramState)
   const { screenToFlowPosition } = useReactFlow()
   const [menu, setMenu] = useState<MenuState | null>(null)
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
@@ -59,8 +60,8 @@ export function Canvas() {
     [views, activeViewId],
   )
   const display = useMemo(
-    () => buildDisplayGraph(nodes, edges, layers, activeView),
-    [nodes, edges, layers, activeView],
+    () => buildDisplayGraph(nodes, edges, layers, activeView, diagramState),
+    [nodes, edges, layers, activeView, diagramState],
   )
 
   // Focus origin = hovered node, or the single selected node when nothing is hovered.

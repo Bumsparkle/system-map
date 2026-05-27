@@ -7,6 +7,7 @@ import { DiagramTitle } from './DiagramTitle'
 import { ExportMenu } from './ExportMenu'
 import { LayerPanel } from './LayerPanel'
 import { SaveIndicator } from './SaveIndicator'
+import { StateToggle } from './StateToggle'
 import { ViewSelector } from './ViewSelector'
 
 export function TopBar() {
@@ -22,6 +23,9 @@ export function TopBar() {
         <ArrowLeft className="h-4 w-4" />
       </Link>
       <DiagramTitle />
+      <div className="ml-3 shrink-0">
+        <StateToggle />
+      </div>
       <div className="ml-auto flex items-center gap-3">
         <SaveIndicator />
         <ViewSelector />

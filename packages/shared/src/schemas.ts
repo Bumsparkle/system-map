@@ -33,6 +33,19 @@ export type EdgeRouting = z.infer<typeof edgeRoutingSchema>
 export const groupBySchema = z.enum(['category', 'layer'])
 export type GroupBy = z.infer<typeof groupBySchema>
 
+// Per-node lifecycle for the current/future-state toggle (spec v1.3 §2.1).
+export const nodeLifecycleSchema = z.enum([
+  'existing', // in current state, stays in future (default)
+  'new', // added in future state
+  'retiring', // removed in future state
+  'replacing', // current node being replaced by a 'new' node
+  'modifying', // stays in both but changes significantly
+])
+export type NodeLifecycle = z.infer<typeof nodeLifecycleSchema>
+
+export const edgeLifecycleSchema = z.enum(['existing', 'new', 'retiring'])
+export type EdgeLifecycle = z.infer<typeof edgeLifecycleSchema>
+
 /* ------------------------------------------------------------------ */
 /* JSONB payload shapes                                                */
 /* ------------------------------------------------------------------ */
@@ -69,6 +82,10 @@ export const nodeDataSchema = z.object({
       fetchedAt: z.string().optional(),
     })
     .optional(),
+  // Current/future-state lifecycle (spec v1.3 §2.1). Absent ⇒ treated as 'existing'.
+  lifecycle: nodeLifecycleSchema.optional(),
+  replacedByNodeId: z.string().optional(),
+  lifecycleNotes: z.string().optional(),
 })
 export type NodeData = z.infer<typeof nodeDataSchema>
 
@@ -83,6 +100,8 @@ export const edgeDataSchema = z.object({
   color: z.string().optional(),
   strokeStyle: strokeStyleSchema.optional(),
   animated: z.boolean().optional(),
+  // Current/future-state lifecycle (spec v1.3 §2.3).
+  lifecycle: edgeLifecycleSchema.optional(),
 })
 export type EdgeData = z.infer<typeof edgeDataSchema>
 

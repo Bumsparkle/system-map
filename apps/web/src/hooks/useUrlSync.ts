@@ -1,13 +1,19 @@
 import { useDiagramStore } from '@/stores/diagramStore'
+import { type DiagramStateView, useUiStore } from '@/stores/uiStore'
 import { useNodesInitialized, useReactFlow } from '@xyflow/react'
 import { useEffect, useMemo, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
 
+function isState(v: string | null): v is DiagramStateView {
+  return v === 'current' || v === 'future' || v === 'delta'
+}
+
 /**
- * Two-way sync between the URL and selection/view (spec v1.1 §8):
- * - On first load, `?node=` selects + centers a node and `?view=` applies a view.
- * - Afterwards, changing the selection or active view updates the URL (debounced,
- *   history-replacing so it doesn't spam the back button).
+ * Two-way sync between the URL and selection/view/state (spec v1.1 §8, v1.3 §3.4):
+ * - On first load, `?node=` selects + centers a node, `?view=` applies a view, and
+ *   `?state=` (or per-diagram localStorage) applies the current/future/delta toggle.
+ * - Afterwards, changing the selection / active view / state updates the URL
+ *   (debounced, history-replacing) and persists the state to localStorage.
  */
 export function useUrlSync() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -15,9 +21,12 @@ export function useUrlSync() {
   const nodesInitialized = useNodesInitialized()
   const nodes = useDiagramStore((s) => s.nodes)
   const views = useDiagramStore((s) => s.views)
+  const diagramId = useDiagramStore((s) => s.diagramId)
   const selectNode = useDiagramStore((s) => s.selectNode)
   const activeViewId = useDiagramStore((s) => s.activeViewId)
   const setActiveView = useDiagramStore((s) => s.setActiveView)
+  const diagramState = useUiStore((s) => s.diagramState)
+  const setDiagramState = useUiStore((s) => s.setDiagramState)
 
   const selectedNodeId = useMemo(() => {
     const sel = nodes.filter((n) => n.selected)
@@ -31,6 +40,10 @@ export function useUrlSync() {
   useEffect(() => {
     if (applied.current || !nodesInitialized) return
     applied.current = true
+    // State toggle: URL ?state wins, else per-diagram localStorage, else Current.
+    const stateParam = searchParams.get('state')
+    const stored = diagramId ? localStorage.getItem(`sysmap:state:${diagramId}`) : null
+    setDiagramState(isState(stateParam) ? stateParam : isState(stored) ? stored : 'current')
     const viewParam = searchParams.get('view')
     if (viewParam && views.some((v) => v.id === viewParam)) setActiveView(viewParam)
     const nodeParam = searchParams.get('node')
@@ -40,9 +53,25 @@ export function useUrlSync() {
         fitView({ nodes: [{ id: nodeParam }], duration: 400, maxZoom: 1.4, padding: 0.4 }),
       )
     }
-  }, [nodesInitialized, nodes, views, searchParams, selectNode, setActiveView, fitView])
+  }, [
+    nodesInitialized,
+    nodes,
+    views,
+    diagramId,
+    searchParams,
+    selectNode,
+    setActiveView,
+    setDiagramState,
+    fitView,
+  ])
 
-  // Reflect the current selection + active view back into the URL (debounced 200ms).
+  // Persist the state toggle per-diagram in localStorage as soon as it changes.
+  useEffect(() => {
+    if (!applied.current || !diagramId) return
+    localStorage.setItem(`sysmap:state:${diagramId}`, diagramState)
+  }, [diagramId, diagramState])
+
+  // Reflect the current selection + active view + state back into the URL (debounced 200ms).
   useEffect(() => {
     if (!applied.current) return
     const t = setTimeout(() => {
@@ -53,11 +82,14 @@ export function useUrlSync() {
           else next.delete('node')
           if (activeViewId) next.set('view', activeViewId)
           else next.delete('view')
+          // Keep the default (current) out of the URL; only surface non-default.
+          if (diagramState !== 'current') next.set('state', diagramState)
+          else next.delete('state')
           return next
         },
         { replace: true },
       )
     }, 200)
     return () => clearTimeout(t)
-  }, [selectedNodeId, activeViewId, setSearchParams])
+  }, [selectedNodeId, activeViewId, diagramState, setSearchParams])
 }
