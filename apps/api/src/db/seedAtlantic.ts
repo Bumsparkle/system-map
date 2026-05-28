@@ -52,7 +52,7 @@ const gbp = (
 type Extra = {
   lifecycle?: NodeLifecycle
   cost?: NodeCost
-  notes?: string
+  lifecycleNotes?: string
   replacedByNodeId?: string
 }
 
@@ -167,24 +167,24 @@ async function main() {
     await appNode('atl-salesforce', L_DATA, 'salesforce', 40, 380, {
       lifecycle: 'existing',
       cost: gbp(2000, 'known', 'Broker portal'),
-      notes: 'Broker portal — stays.',
+      lifecycleNotes: 'Broker portal — stays.',
     }),
     await appNode('atl-snowflake', L_DATA, 'snowflake', 900, 220, {
       lifecycle: 'modifying',
       cost: gbp(1500, 'known'),
-      notes: 'Scaling for new data sources.',
+      lifecycleNotes: 'Scaling for new data sources.',
     }),
 
     // Underwriting & claims
     await appNode('atl-excel', L_UW, 'microsoft 365', 320, 70, {
       lifecycle: 'retiring',
       cost: gbp(200, 'known', 'Excel + M365 licences'),
-      notes: 'Spreadsheet pricing — retired in favour of hyperexponential.',
+      lifecycleNotes: 'Spreadsheet pricing — retired in favour of hyperexponential.',
     }),
     await appNode('atl-send', L_UW, 'send', 320, 210, {
       lifecycle: 'new',
       cost: gbp(6000, 'estimated'),
-      notes: 'Underwriter workbench.',
+      lifecycleNotes: 'Underwriter workbench.',
     }),
     plainNode('atl-claims', L_UW, 'custom', 'Manual claims', 320, 360, 'Claims handlers', {
       lifecycle: 'existing',
@@ -192,12 +192,12 @@ async function main() {
     await appNode('atl-shift', L_UW, 'shift technology', 320, 510, {
       lifecycle: 'new',
       cost: gbp(3000, 'estimated'),
-      notes: 'Claims fraud detection.',
+      lifecycleNotes: 'Claims fraud detection.',
     }),
     await appNode('atl-hx', L_UW, 'hyperexponential', 600, 430, {
       lifecycle: 'new',
       cost: gbp(8000, 'estimated'),
-      notes: 'Pricing & rating.',
+      lifecycleNotes: 'Pricing & rating.',
     }),
 
     // Core platform — the replacement chain
@@ -205,12 +205,12 @@ async function main() {
       lifecycle: 'replacing',
       replacedByNodeId: 'atl-guidewire',
       cost: gbp(4000, 'known'),
-      notes: 'Legacy policy admin — being replaced by Guidewire.',
+      lifecycleNotes: 'Legacy policy admin — being replaced by Guidewire.',
     }),
     await appNode('atl-guidewire', L_CORE, 'guidewire', 600, 250, {
       lifecycle: 'new',
       cost: gbp(12000, 'estimated'),
-      notes: 'Modern policy admin core.',
+      lifecycleNotes: 'Modern policy admin core.',
     }),
   ]
 

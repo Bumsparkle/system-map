@@ -18,6 +18,18 @@
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["--filter", "@system-map/web", "preview", "--port", "4173", "--strictPort"],
       "port": 4173
+    },
+    {
+      "name": "web-sub",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": ["-c", "VITE_BASE=/system-map/ pnpm --filter @system-map/web preview --port 4174 --strictPort"],
+      "port": 4174
+    },
+    {
+      "name": "web-demo-dev",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": ["-c", "VITE_DEMO=1 pnpm --filter @system-map/web dev --port 5174 --strictPort"],
+      "port": 5174
     }
   ]
 }

@@ -33,8 +33,11 @@ export async function lookupVendor(q: string, fresh = false): Promise<VendorLook
   }
 }
 
-/** Mirrored logos come back server-relative (/uploads/…); make them absolute. */
+/** Resolve a logo URL. Absolute URLs pass through. Server-relative /uploads/…
+ *  paths come from the API locally, but are bundled under the site base in the
+ *  static demo build (no backend there). */
 export function vendorLogoSrc(logoUrl: string | null | undefined): string | null {
   if (!logoUrl) return null
-  return logoUrl.startsWith('/') ? `${API_URL}${logoUrl}` : logoUrl
+  if (!logoUrl.startsWith('/')) return logoUrl
+  return DEMO ? `${import.meta.env.BASE_URL}${logoUrl.replace(/^\//, '')}` : `${API_URL}${logoUrl}`
 }
