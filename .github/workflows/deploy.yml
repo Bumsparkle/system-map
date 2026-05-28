@@ -36,10 +36,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build web (demo mode)
+      # Live app against the hosted API. Set the repo Actions variable
+      # VITE_API_URL to your Render API URL (https://system-map-api.onrender.com).
+      - name: Build web (live API)
         env:
-          VITE_DEMO: "1"
           VITE_BASE: /system-map/
+          VITE_API_URL: ${{ vars.VITE_API_URL }}
         run: pnpm --filter @system-map/web build
 
       - name: Add SPA fallback + disable Jekyll

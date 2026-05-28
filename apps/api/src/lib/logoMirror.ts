@@ -28,6 +28,8 @@ export async function mirrorLogo(domain: string): Promise<string | null> {
   if (!token) return null
 
   const src = `https://img.logo.dev/${encodeURIComponent(domain)}?token=${encodeURIComponent(token)}&size=128&format=png`
+  // On hosts without a persistent disk, skip the mirror and serve logo.dev directly.
+  if (env.LOGO_DEV_DIRECT === '1') return src
   try {
     const res = await fetch(src, { signal: AbortSignal.timeout(LOGO_TIMEOUT_MS) })
     if (!res.ok) return null

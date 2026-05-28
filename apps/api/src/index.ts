@@ -52,7 +52,7 @@ await app.register(saveRoutes, { prefix: '/api' })
 await app.register(vendorRoutes, { prefix: '/api' })
 
 try {
-  const address = await app.listen({ port: env.API_PORT, host: '0.0.0.0' })
+  const address = await app.listen({ port: env.PORT ?? env.API_PORT, host: '0.0.0.0' })
   app.log.info(`System Map API listening on ${address}`)
 } catch (err) {
   app.log.error(err)

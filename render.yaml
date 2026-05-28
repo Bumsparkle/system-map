@@ -1,0 +1,35 @@
+# Render Blueprint for the System Map API + Postgres (spec: hosted-backend demo).
+# In Render: New → Blueprint → connect this repo. Render provisions the database
+# and the web service, wiring DATABASE_URL automatically. Set LOGO_DEV_TOKEN in
+# the service's Environment tab after the first deploy, then redeploy.
+#
+# The deployed API URL is https://<service-name>.onrender.com — set that as the
+# repo Actions variable VITE_API_URL so the GitHub Pages build talks to it.
+
+databases:
+  - name: system-map-db
+    plan: free
+
+services:
+  - type: web
+    name: system-map-api
+    runtime: node
+    plan: free
+    healthCheckPath: /health
+    # Install the full workspace (tsx/drizzle-kit are needed at runtime + migrate).
+    buildCommand: corepack enable && pnpm install --frozen-lockfile
+    # Free tier has no pre-deploy hook, so migrate (idempotent) then start.
+    startCommand: pnpm --filter @system-map/api db:migrate && pnpm --filter @system-map/api start
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: system-map-db
+          property: connectionString
+      - key: NODE_ENV
+        value: production
+      # Serve logo.dev URLs directly (no persistent disk on free tier).
+      - key: LOGO_DEV_DIRECT
+        value: "1"
+      # Paste your logo.dev publishable token in the Render dashboard.
+      - key: LOGO_DEV_TOKEN
+        sync: false
