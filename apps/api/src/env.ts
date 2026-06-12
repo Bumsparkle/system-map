@@ -19,6 +19,12 @@ const envSchema = z.object({
   // '1' ⇒ return logo.dev URLs directly instead of mirroring to disk — for
   // hosts without a persistent volume (the publishable token is client-safe).
   LOGO_DEV_DIRECT: z.string().optional(),
+  // Supabase Auth: when both are set, every /api route requires a valid bearer
+  // JWT. When absent (local dev), the API runs in a single-user no-auth mode.
+  SUPABASE_URL: z.string().url().optional(),
+  SUPABASE_ANON_KEY: z.string().optional(),
+  // Stand-in user id for that no-auth dev mode (also used to own seeded data).
+  DEV_USER_ID: z.string().optional(),
 })
 
 export const env = envSchema.parse(process.env)

@@ -1,5 +1,5 @@
 import { createCompanyInput, updateCompanyInput } from '@system-map/shared'
-import { asc, eq } from 'drizzle-orm'
+import { and, asc, eq } from 'drizzle-orm'
 import type { FastifyPluginAsync } from 'fastify'
 import { nanoid } from 'nanoid'
 import { db, schema } from '../db/client'
@@ -22,8 +22,12 @@ async function uniqueSlug(desired: string): Promise<string> {
 }
 
 export const companyRoutes: FastifyPluginAsync = async (app) => {
-  app.get('/companies', async () => {
-    return db.select().from(schema.companies).orderBy(asc(schema.companies.createdAt))
+  app.get('/companies', async (req) => {
+    return db
+      .select()
+      .from(schema.companies)
+      .where(eq(schema.companies.ownerId, req.user.id))
+      .orderBy(asc(schema.companies.createdAt))
   })
 
   app.post('/companies', async (req, reply) => {
@@ -31,7 +35,7 @@ export const companyRoutes: FastifyPluginAsync = async (app) => {
     const slug = await uniqueSlug(body.slug ?? body.name)
     const [row] = await db
       .insert(schema.companies)
-      .values({ id: nanoid(), name: body.name, slug })
+      .values({ id: nanoid(), ownerId: req.user.id, name: body.name, slug })
       .returning()
     reply.code(201)
     return row
@@ -42,7 +46,7 @@ export const companyRoutes: FastifyPluginAsync = async (app) => {
     const [row] = await db
       .select()
       .from(schema.companies)
-      .where(eq(schema.companies.id, id))
+      .where(and(eq(schema.companies.id, id), eq(schema.companies.ownerId, req.user.id)))
       .limit(1)
     if (!row) throw notFound('Company')
     return row
@@ -57,7 +61,7 @@ export const companyRoutes: FastifyPluginAsync = async (app) => {
     const [row] = await db
       .update(schema.companies)
       .set(patch)
-      .where(eq(schema.companies.id, id))
+      .where(and(eq(schema.companies.id, id), eq(schema.companies.ownerId, req.user.id)))
       .returning()
     if (!row) throw notFound('Company')
     return row
@@ -65,7 +69,10 @@ export const companyRoutes: FastifyPluginAsync = async (app) => {
 
   app.delete('/companies/:id', async (req, reply) => {
     const { id } = req.params as { id: string }
-    const [row] = await db.delete(schema.companies).where(eq(schema.companies.id, id)).returning()
+    const [row] = await db
+      .delete(schema.companies)
+      .where(and(eq(schema.companies.id, id), eq(schema.companies.ownerId, req.user.id)))
+      .returning()
     if (!row) throw notFound('Company')
     reply.code(204)
     return null

@@ -1,8 +1,9 @@
 import { createDiagramInput, updateDiagramInput } from '@system-map/shared'
-import { asc, desc, eq } from 'drizzle-orm'
+import { and, asc, desc, eq, getTableColumns } from 'drizzle-orm'
 import type { FastifyPluginAsync } from 'fastify'
 import { nanoid } from 'nanoid'
 import { db, schema } from '../db/client'
+import { assertCompanyOwned, assertDiagramOwned } from '../lib/authz'
 import { notFound } from '../lib/errors'
 
 // Default "Main" layer uses the accent (burnt sienna) as its indicator color.
@@ -11,6 +12,7 @@ const DEFAULT_LAYER_COLOR = '#D4471F'
 export const diagramRoutes: FastifyPluginAsync = async (app) => {
   app.get('/companies/:companyId/diagrams', async (req) => {
     const { companyId } = req.params as { companyId: string }
+    await assertCompanyOwned(companyId, req.user.id)
     return db
       .select()
       .from(schema.diagrams)
@@ -22,12 +24,7 @@ export const diagramRoutes: FastifyPluginAsync = async (app) => {
     const { companyId } = req.params as { companyId: string }
     const body = createDiagramInput.parse(req.body)
 
-    const [company] = await db
-      .select({ id: schema.companies.id })
-      .from(schema.companies)
-      .where(eq(schema.companies.id, companyId))
-      .limit(1)
-    if (!company) throw notFound('Company')
+    await assertCompanyOwned(companyId, req.user.id)
 
     const diagramId = nanoid()
     const diagram = await db.transaction(async (tx) => {
@@ -56,13 +53,15 @@ export const diagramRoutes: FastifyPluginAsync = async (app) => {
     return diagram
   })
 
-  // Full diagram payload in one round-trip (spec §9).
+  // Full diagram payload in one round-trip (spec §9). The join enforces that the
+  // diagram's company belongs to the caller — unowned ids read as 404.
   app.get('/diagrams/:id', async (req) => {
     const { id } = req.params as { id: string }
     const [diagram] = await db
-      .select()
+      .select(getTableColumns(schema.diagrams))
       .from(schema.diagrams)
-      .where(eq(schema.diagrams.id, id))
+      .innerJoin(schema.companies, eq(schema.diagrams.companyId, schema.companies.id))
+      .where(and(eq(schema.diagrams.id, id), eq(schema.companies.ownerId, req.user.id)))
       .limit(1)
     if (!diagram) throw notFound('Diagram')
 
@@ -83,6 +82,7 @@ export const diagramRoutes: FastifyPluginAsync = async (app) => {
   app.patch('/diagrams/:id', async (req) => {
     const { id } = req.params as { id: string }
     const body = updateDiagramInput.parse(req.body)
+    await assertDiagramOwned(id, req.user.id)
     const patch: Partial<typeof schema.diagrams.$inferInsert> = { updatedAt: new Date() }
     if (body.name !== undefined) patch.name = body.name
     if (body.description !== undefined) patch.description = body.description
@@ -97,6 +97,7 @@ export const diagramRoutes: FastifyPluginAsync = async (app) => {
 
   app.delete('/diagrams/:id', async (req, reply) => {
     const { id } = req.params as { id: string }
+    await assertDiagramOwned(id, req.user.id)
     const [row] = await db.delete(schema.diagrams).where(eq(schema.diagrams.id, id)).returning()
     if (!row) throw notFound('Diagram')
     reply.code(204)

@@ -13,10 +13,12 @@ export const saveRoutes: FastifyPluginAsync = async (app) => {
     const body = saveDiagramInput.parse(req.body)
 
     await db.transaction(async (tx) => {
+      // Ownership gate: the diagram's company must belong to the caller.
       const [diagram] = await tx
         .select({ id: schema.diagrams.id })
         .from(schema.diagrams)
-        .where(eq(schema.diagrams.id, id))
+        .innerJoin(schema.companies, eq(schema.diagrams.companyId, schema.companies.id))
+        .where(and(eq(schema.diagrams.id, id), eq(schema.companies.ownerId, req.user.id)))
         .limit(1)
       if (!diagram) throw notFound('Diagram')
 

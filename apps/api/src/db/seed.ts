@@ -1,5 +1,6 @@
 import type { EdgeData, FlowType, NodeData, NodeType } from '@system-map/shared'
 import { inArray } from 'drizzle-orm'
+import { DEV_USER_ID } from '../lib/devUser'
 import { db, queryClient, schema } from './client'
 
 /**
@@ -312,7 +313,9 @@ async function seed() {
   // Reset prior demo data so re-seeding is clean. (Legacy 'demo-co' slug too.)
   await db.delete(schema.companies).where(inArray(schema.companies.slug, ['acme', 'demo-co']))
 
-  await db.insert(schema.companies).values({ id: COMPANY_ID, name: 'Acme Inc.', slug: 'acme' })
+  await db
+    .insert(schema.companies)
+    .values({ id: COMPANY_ID, ownerId: DEV_USER_ID, name: 'Acme Inc.', slug: 'acme' })
 
   // Payments platform
   await db.insert(schema.diagrams).values({

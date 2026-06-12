@@ -9,16 +9,22 @@ import type {
 } from '@system-map/shared'
 import { boolean, index, integer, jsonb, pgTable, real, text, timestamp } from 'drizzle-orm/pg-core'
 
-// TODO(auth): companies are workspaces owned by a single hardcoded user in the MVP.
-// Adding auth later means introducing a `users` table and a `user_id` FK here — a
-// migration, not a rewrite. No user scoping exists yet.
-export const companies = pgTable('companies', {
-  id: text('id').primaryKey(),
-  name: text('name').notNull(),
-  slug: text('slug').notNull().unique(),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-})
+// Companies are per-user workspaces. ownerId is the Supabase Auth user id
+// (uuid, kept as text alongside our other text ids). Nullable for rows that
+// predate auth; every new company is created with the owner set, and all reads
+// scope to the authenticated user (see routes + lib/authz).
+export const companies = pgTable(
+  'companies',
+  {
+    id: text('id').primaryKey(),
+    ownerId: text('owner_id'),
+    name: text('name').notNull(),
+    slug: text('slug').notNull().unique(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('companies_owner_id_idx').on(t.ownerId)],
+)
 
 export const diagrams = pgTable('diagrams', {
   id: text('id').primaryKey(),

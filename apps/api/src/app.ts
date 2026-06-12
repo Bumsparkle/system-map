@@ -5,6 +5,7 @@ import { ZodError } from 'zod'
 import { env } from './env'
 import { HttpError } from './lib/errors'
 import { UPLOADS_ROOT } from './lib/paths'
+import { type AuthUser, authHook } from './plugins/auth'
 import corsPlugin from './plugins/cors'
 import { companyRoutes } from './routes/companies'
 import { diagramRoutes } from './routes/diagrams'
@@ -55,12 +56,22 @@ export async function buildApp(): Promise<FastifyInstance> {
     reply.code(status).send({ error: status === 500 ? 'Internal Server Error' : err.message })
   })
 
+  // Public: no auth (uptime checks).
   app.get('/health', async () => ({ status: 'ok' }))
 
-  await app.register(companyRoutes, { prefix: '/api' })
-  await app.register(diagramRoutes, { prefix: '/api' })
-  await app.register(saveRoutes, { prefix: '/api' })
-  await app.register(vendorRoutes, { prefix: '/api' })
+  // Everything under /api is gated by authHook (encapsulated to this scope, so
+  // /health stays public). The hook sets req.user; routes scope to it.
+  await app.register(
+    async (api) => {
+      api.decorateRequest('user', null as unknown as AuthUser)
+      api.addHook('onRequest', authHook)
+      await api.register(companyRoutes)
+      await api.register(diagramRoutes)
+      await api.register(saveRoutes)
+      await api.register(vendorRoutes)
+    },
+    { prefix: '/api' },
+  )
 
   return app
 }

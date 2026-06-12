@@ -22,6 +22,13 @@
       "when": 1779811152508,
       "tag": "0002_shocking_starfox",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1781297499490,
+      "tag": "0003_perfect_goliath",
+      "breakpoints": true
     }
   ]
 }
