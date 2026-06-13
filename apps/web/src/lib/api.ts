@@ -6,10 +6,9 @@ import type {
   DiagramDetail,
 } from '@system-map/shared'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { API_URL } from './apiBase'
 import { demoCompanies, demoDiagrams, getDemoDiagram } from './demoData'
 import { authHeaders } from './supabaseClient'
-
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3001'
 
 // Backend-less builds (GitHub Pages) set VITE_DEMO=1 to serve static fixtures.
 const DEMO = import.meta.env.VITE_DEMO === '1'

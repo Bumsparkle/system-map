@@ -1,8 +1,8 @@
 import { ApiError, qk } from '@/lib/api'
+import { API_URL } from '@/lib/apiBase'
 import { authHeaders } from '@/lib/supabaseClient'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3001'
 const DEMO = import.meta.env.VITE_DEMO === '1'
 
 // Bodyless DELETE — deliberately NOT routed through apiFetch, which always sets

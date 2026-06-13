@@ -1,4 +1,5 @@
 import { apiFetch } from '@/lib/api'
+import { API_URL } from '@/lib/apiBase'
 import type { VendorLookup, VendorMaturity, VendorSuggestion } from '@system-map/shared'
 
 /** Maturity tier → dot color + label (spec v1.2 §4.2). */
@@ -8,8 +9,6 @@ export const MATURITY_META: Record<VendorMaturity, { label: string; color: strin
   emerging: { label: 'Emerging', color: '#7B6BC4' },
 }
 
-// Re-derived (not imported) to avoid editing the deploy agent's api.ts.
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3001'
 const DEMO = import.meta.env.VITE_DEMO === '1'
 
 /** Typeahead suggestions. Degrades to [] in demo mode or on any error. */

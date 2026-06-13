@@ -57,4 +57,12 @@ Environment is read from the root `.env` (copy `.env.example`). Defaults match `
 
 ## Auth
 
-The MVP runs as a single hardcoded user with no auth. Companies are workspaces. Adding auth later is a migration (a `users` table + `user_id` FK), not a rewrite — see `// TODO(auth):` markers.
+Production uses **Supabase Auth** (email/password). Every `/api` route requires a
+valid bearer JWT, and data is scoped per user via `companies.owner_id`. Locally,
+when the Supabase env vars are unset, the API and web app run in a single-user
+no-auth mode so you can work offline.
+
+## Deploying
+
+The app is built to host on **Vercel + Supabase** (web + API on Vercel, Postgres
++ Auth on Supabase). See [DEPLOY.md](DEPLOY.md) for the full walkthrough.
