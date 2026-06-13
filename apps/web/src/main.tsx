@@ -8,6 +8,8 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import { App } from './App'
+import { AuthGate } from './components/auth/AuthGate'
+import { AuthProvider } from './lib/auth'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -24,9 +26,13 @@ const basename = import.meta.env.BASE_URL.replace(/\/$/, '')
 createRoot(rootEl).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter basename={basename}>
-        <App />
-      </BrowserRouter>
+      <AuthProvider>
+        <BrowserRouter basename={basename}>
+          <AuthGate>
+            <App />
+          </AuthGate>
+        </BrowserRouter>
+      </AuthProvider>
     </QueryClientProvider>
   </StrictMode>,
 )

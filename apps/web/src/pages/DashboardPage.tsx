@@ -11,10 +11,11 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useCompanies, useCreateCompany, useCreateDiagram, useDiagrams } from '@/lib/api'
+import { useAuth } from '@/lib/auth'
 import { useDeleteDiagram } from '@/lib/diagramMutations'
 import { formatRelativeDate } from '@/lib/utils'
 import type { Company, Diagram } from '@system-map/shared'
-import { Plus, Trash2 } from 'lucide-react'
+import { LogOut, Plus, Trash2 } from 'lucide-react'
 import { type FormEvent, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
@@ -29,10 +30,13 @@ export function DashboardPage() {
           <div className="h-5 w-5 rounded-[5px] bg-accent" />
           <span className="font-semibold tracking-tight">System Map</span>
         </div>
-        <Button size="sm" onClick={() => setNewCompanyOpen(true)}>
-          <Plus className="h-4 w-4" />
-          New company
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button size="sm" onClick={() => setNewCompanyOpen(true)}>
+            <Plus className="h-4 w-4" />
+            New company
+          </Button>
+          <AccountMenu />
+        </div>
       </header>
 
       <main className="mx-auto w-full max-w-5xl px-6 py-10">
@@ -68,6 +72,24 @@ export function DashboardPage() {
       </main>
 
       <NewCompanyDialog open={newCompanyOpen} onOpenChange={setNewCompanyOpen} />
+    </div>
+  )
+}
+
+/** Signed-in user's email + sign-out. Renders nothing when auth is disabled. */
+function AccountMenu() {
+  const { enabled, user, signOut } = useAuth()
+  if (!enabled) return null
+  return (
+    <div className="flex items-center gap-2.5 border-l border-border pl-3">
+      {user?.email && (
+        <span className="hidden max-w-[18ch] truncate text-sm text-ink-muted sm:inline">
+          {user.email}
+        </span>
+      )}
+      <Button variant="ghost" size="icon-sm" onClick={() => signOut()} title="Sign out">
+        <LogOut className="h-4 w-4" />
+      </Button>
     </div>
   )
 }

@@ -22,14 +22,29 @@
     {
       "name": "web-sub",
       "runtimeExecutable": "sh",
-      "runtimeArgs": ["-c", "VITE_BASE=/system-map/ pnpm --filter @system-map/web preview --port 4174 --strictPort"],
+      "runtimeArgs": [
+        "-c",
+        "VITE_BASE=/system-map/ pnpm --filter @system-map/web preview --port 4174 --strictPort"
+      ],
       "port": 4174
     },
     {
       "name": "web-demo-dev",
       "runtimeExecutable": "sh",
-      "runtimeArgs": ["-c", "VITE_DEMO=1 pnpm --filter @system-map/web dev --port 5174 --strictPort"],
+      "runtimeArgs": [
+        "-c",
+        "VITE_DEMO=1 pnpm --filter @system-map/web dev --port 5174 --strictPort"
+      ],
       "port": 5174
+    },
+    {
+      "name": "web-auth-dev",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "VITE_SUPABASE_URL=https://example.supabase.co VITE_SUPABASE_ANON_KEY=dummy-anon-key pnpm --filter @system-map/web dev --port 5175 --strictPort"
+      ],
+      "port": 5175
     }
   ]
 }

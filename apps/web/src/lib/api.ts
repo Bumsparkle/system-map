@@ -7,6 +7,7 @@ import type {
 } from '@system-map/shared'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { demoCompanies, demoDiagrams, getDemoDiagram } from './demoData'
+import { authHeaders } from './supabaseClient'
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3001'
 
@@ -30,7 +31,7 @@ export class ApiError extends Error {
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {
     ...init,
-    headers: { 'Content-Type': 'application/json', ...init?.headers },
+    headers: { 'Content-Type': 'application/json', ...(await authHeaders()), ...init?.headers },
   })
   if (!res.ok) {
     let message = res.statusText
