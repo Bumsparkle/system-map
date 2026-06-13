@@ -1,0 +1,9 @@
+{
+  "//": "Root tsconfig so Vercel's @vercel/node compiler picks up our Bundler module resolution when building the serverless function in api/ (it imports apps/api + packages/shared TS source). Without this it defaults to nodenext and demands .js import extensions. Per-package builds still use their own tsconfig.json.",
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "noEmit": true
+  },
+  "include": ["api"]
+}
