@@ -1,4 +1,5 @@
 import type { Session, User } from '@supabase/supabase-js'
+import { useQueryClient } from '@tanstack/react-query'
 import { type ReactNode, createContext, useContext, useEffect, useState } from 'react'
 import { authEnabled, supabase } from './supabaseClient'
 
@@ -17,6 +18,7 @@ type AuthState = {
 const AuthContext = createContext<AuthState | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient()
   const [session, setSession] = useState<Session | null>(null)
   // Only block on the initial session lookup when auth is actually on.
   const [loading, setLoading] = useState(authEnabled)
@@ -27,9 +29,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(data.session)
       setLoading(false)
     })
-    const { data } = supabase.auth.onAuthStateChange((_event, next) => setSession(next))
+    const { data } = supabase.auth.onAuthStateChange((event, next) => {
+      setSession(next)
+      // Never let the next user see the previous user's cached data on a shared
+      // browser. SIGNED_OUT only fires on a real sign-out, never on load.
+      if (event === 'SIGNED_OUT') queryClient.clear()
+    })
     return () => data.subscription.unsubscribe()
-  }, [])
+  }, [queryClient])
 
   const value: AuthState = {
     enabled: authEnabled,
