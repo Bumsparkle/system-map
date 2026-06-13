@@ -34,10 +34,11 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(corsPlugin)
 
   // Serve mirrored vendor logos (spec v1.2 §2.4) only when we actually mirror to
-  // disk. On serverless hosts (LOGO_DEV_DIRECT=1) logos are absolute logo.dev
-  // URLs, the disk is ephemeral/read-only, and this route would never be hit —
-  // so skip both the mkdir and the static registration.
-  if (env.LOGO_DEV_DIRECT !== '1') {
+  // disk. On serverless (Vercel sets VERCEL=1, or LOGO_DEV_DIRECT=1) logos are
+  // absolute logo.dev URLs, the filesystem is read-only, and this route is never
+  // hit — so skip both the mkdir (which would throw EROFS) and the static mount.
+  const isServerless = process.env.VERCEL === '1' || env.LOGO_DEV_DIRECT === '1'
+  if (!isServerless) {
     await mkdir(UPLOADS_ROOT, { recursive: true })
     await app.register(fastifyStatic, { root: UPLOADS_ROOT, prefix: '/uploads/' })
   }

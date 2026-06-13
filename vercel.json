@@ -1,11 +1,11 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "installCommand": "pnpm install --frozen-lockfile",
-  "buildCommand": "pnpm --filter @system-map/web build",
+  "buildCommand": "node apps/api/scripts/bundle.mjs && pnpm --filter @system-map/web build",
   "outputDirectory": "apps/web/dist",
   "framework": null,
   "functions": {
-    "api/**/*.ts": {
+    "api/**/*.mjs": {
       "maxDuration": 30
     }
   },
