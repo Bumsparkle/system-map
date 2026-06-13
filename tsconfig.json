@@ -1,7 +1,9 @@
 {
-  "//": "Root tsconfig so Vercel's @vercel/node compiler picks up our Bundler module resolution when building the serverless function in api/ (it imports apps/api + packages/shared TS source). Without this it defaults to nodenext and demands .js import extensions. Per-package builds still use their own tsconfig.json.",
+  "//": "Mirrors how Vercel's @vercel/node compiles the repo-root /api serverless function: NodeNext module resolution (it forces this for ESM and ignores Bundler). Running `tsc -p tsconfig.json` locally reproduces the Vercel build, so the function + its apps/api & shared imports must be NodeNext-clean (explicit .js extensions). Per-package builds still use their own tsconfig.json (Bundler).",
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
     "types": ["node"],
     "noEmit": true
   },

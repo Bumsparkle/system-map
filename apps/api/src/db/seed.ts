@@ -1,7 +1,7 @@
 import type { EdgeData, FlowType, NodeData, NodeType } from '@system-map/shared'
 import { inArray } from 'drizzle-orm'
-import { DEV_USER_ID } from '../lib/devUser'
-import { db, queryClient, schema } from './client'
+import { DEV_USER_ID } from '../lib/devUser.js'
+import { db, queryClient, schema } from './client.js'
 
 /**
  * Dev seed: "Acme Inc." with two example maps (mirrors the static-demo fixtures

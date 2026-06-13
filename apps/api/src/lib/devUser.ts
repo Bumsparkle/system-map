@@ -1,4 +1,4 @@
-import { env } from '../env'
+import { env } from '../env.js'
 
 // Stable stand-in user used when Supabase auth isn't configured (local dev).
 // Seed scripts assign this id as owner so the seeded workspace is visible in

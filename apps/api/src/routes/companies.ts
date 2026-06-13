@@ -2,9 +2,9 @@ import { createCompanyInput, updateCompanyInput } from '@system-map/shared'
 import { and, asc, eq } from 'drizzle-orm'
 import type { FastifyPluginAsync } from 'fastify'
 import { nanoid } from 'nanoid'
-import { db, schema } from '../db/client'
-import { notFound } from '../lib/errors'
-import { slugify } from '../lib/slug'
+import { db, schema } from '../db/client.js'
+import { notFound } from '../lib/errors.js'
+import { slugify } from '../lib/slug.js'
 
 async function uniqueSlug(desired: string): Promise<string> {
   const base = slugify(desired)

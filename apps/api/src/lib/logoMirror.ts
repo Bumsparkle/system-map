@@ -1,8 +1,8 @@
 import { mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { nanoid } from 'nanoid'
-import { env } from '../env'
-import { VENDOR_LOGOS_DIR } from './paths'
+import { env } from '../env.js'
+import { VENDOR_LOGOS_DIR } from './paths.js'
 
 const LOGO_TIMEOUT_MS = 2000
 

@@ -1,5 +1,5 @@
-import { buildApp } from './app'
-import { env } from './env'
+import { buildApp } from './app.js'
+import { env } from './env.js'
 
 // Long-running server entrypoint (local dev + Render). On Vercel the app is
 // served by api/[...path].ts instead, which never calls listen().

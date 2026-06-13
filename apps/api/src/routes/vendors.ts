@@ -9,10 +9,14 @@ import { eq, like } from 'drizzle-orm'
 import type { FastifyBaseLogger, FastifyPluginAsync } from 'fastify'
 import { nanoid } from 'nanoid'
 import { z } from 'zod'
-import { VENDOR_METADATA, findVendorMetadata, normaliseVendorQuery } from '../data/vendor-metadata'
-import { db, schema } from '../db/client'
-import { mirrorLogo } from '../lib/logoMirror'
-import { fetchWikipediaOpenSearch, fetchWikipediaSummary } from '../lib/wikipedia'
+import {
+  VENDOR_METADATA,
+  findVendorMetadata,
+  normaliseVendorQuery,
+} from '../data/vendor-metadata.js'
+import { db, schema } from '../db/client.js'
+import { mirrorLogo } from '../lib/logoMirror.js'
+import { fetchWikipediaOpenSearch, fetchWikipediaSummary } from '../lib/wikipedia.js'
 
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000
 

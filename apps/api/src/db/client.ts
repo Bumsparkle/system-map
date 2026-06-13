@@ -1,7 +1,7 @@
 import { drizzle } from 'drizzle-orm/postgres-js'
 import postgres from 'postgres'
-import { env } from '../env'
-import * as schema from './schema'
+import { env } from '../env.js'
+import * as schema from './schema.js'
 
 // Vercel (and most serverless hosts) set this. On serverless we talk to the
 // Supabase transaction pooler, which requires prepared statements off and a

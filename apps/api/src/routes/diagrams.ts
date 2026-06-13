@@ -2,9 +2,9 @@ import { createDiagramInput, updateDiagramInput } from '@system-map/shared'
 import { and, asc, desc, eq, getTableColumns } from 'drizzle-orm'
 import type { FastifyPluginAsync } from 'fastify'
 import { nanoid } from 'nanoid'
-import { db, schema } from '../db/client'
-import { assertCompanyOwned, assertDiagramOwned } from '../lib/authz'
-import { notFound } from '../lib/errors'
+import { db, schema } from '../db/client.js'
+import { assertCompanyOwned, assertDiagramOwned } from '../lib/authz.js'
+import { notFound } from '../lib/errors.js'
 
 // Default "Main" layer uses the accent (burnt sienna) as its indicator color.
 const DEFAULT_LAYER_COLOR = '#D4471F'

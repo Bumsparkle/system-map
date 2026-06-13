@@ -1,7 +1,7 @@
 import type { FastifyReply, FastifyRequest } from 'fastify'
-import { DEV_USER_ID } from '../lib/devUser'
-import { HttpError } from '../lib/errors'
-import { getSupabase, supabaseConfigured } from '../lib/supabase'
+import { DEV_USER_ID } from '../lib/devUser.js'
+import { HttpError } from '../lib/errors.js'
+import { getSupabase, supabaseConfigured } from '../lib/supabase.js'
 
 export type AuthUser = { id: string; email: string | null }
 

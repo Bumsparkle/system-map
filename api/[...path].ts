@@ -9,7 +9,7 @@
 // `fastify` directly and derive the app type from buildApp(). The relative
 // import below resolves `fastify` & friends from apps/api/node_modules.
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import { buildApp } from '../apps/api/src/app'
+import { buildApp } from '../apps/api/src/app.js'
 
 type App = Awaited<ReturnType<typeof buildApp>>
 

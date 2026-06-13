@@ -1,7 +1,7 @@
 // Pre-warm the vendor cache before a demo (spec v1.2 §5) so every search/lookup
 // is a hit (<10ms) and logos are already mirrored to disk.
 //   pnpm --filter @system-map/api warm
-import { VENDOR_METADATA } from '../data/vendor-metadata'
+import { VENDOR_METADATA } from '../data/vendor-metadata.js'
 
 const API = process.env.API_URL ?? 'http://localhost:3001'
 const queries = Object.keys(VENDOR_METADATA)

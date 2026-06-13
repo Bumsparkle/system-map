@@ -1,8 +1,8 @@
 import { saveDiagramInput } from '@system-map/shared'
 import { and, eq, notInArray, sql } from 'drizzle-orm'
 import type { FastifyPluginAsync } from 'fastify'
-import { db, schema } from '../db/client'
-import { notFound } from '../lib/errors'
+import { db, schema } from '../db/client.js'
+import { notFound } from '../lib/errors.js'
 
 // Atomic bulk save (spec §9): diff the incoming full diagram state against the DB
 // and apply inserts/updates/deletes in one transaction. Simpler than per-entity

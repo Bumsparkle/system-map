@@ -10,7 +10,7 @@ import type {
   VendorLookup,
 } from '@system-map/shared'
 import { eq } from 'drizzle-orm'
-import { db, queryClient, schema } from './client'
+import { db, queryClient, schema } from './client.js'
 
 /**
  * Seed the "Project Atlantic" demo diagram (spec v1.3 §6): a Lloyd's syndicate

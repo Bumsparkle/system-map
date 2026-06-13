@@ -1,6 +1,6 @@
 import { and, eq } from 'drizzle-orm'
-import { db, schema } from '../db/client'
-import { notFound } from './errors'
+import { db, schema } from '../db/client.js'
+import { notFound } from './errors.js'
 
 // Ownership checks scope every diagram/company operation to the logged-in user.
 // We throw 404 (not 403) on a miss so the API never reveals that an id exists
