@@ -14,6 +14,35 @@ import { z } from 'zod'
 // Burnt-sienna accent, matching the auto-created "Main" layer on the server.
 const DEFAULT_LAYER_COLOR = '#D4471F'
 
+/**
+ * Prompt the user copies into an LLM (ChatGPT/Claude/etc.) to turn a plain
+ * description of their architecture into the simple import JSON. Kept in sync
+ * with simpleSchema + the node/flow type enums below.
+ */
+export const AI_IMPORT_PROMPT = `I want to create a system architecture map. From my description below, output a single JSON object that describes it as nodes (the things) and edges (how they connect).
+
+Output ONLY the JSON — no explanation and no markdown code fences. Match this shape exactly:
+
+{
+  "name": "Short map name",
+  "nodes": [
+    { "label": "Stripe", "type": "app", "category": "Payments" }
+  ],
+  "edges": [
+    { "from": "Billing Service", "to": "Stripe", "label": "charge", "type": "api" }
+  ]
+}
+
+Rules:
+- node "type" is one of: app (a third-party SaaS/vendor, e.g. Stripe, Salesforce), system (an internal service or component), data_source (a database, warehouse or feed), external_entity (a person or organisation, e.g. a customer or broker), cash (money, revenue or cost), group (a container), custom. Use "app" if unsure.
+- edge "type" is one of: data, api, cash (money movement), manual (an offline/manual step), event (async event or message), custom. Use "data" if unsure.
+- "category" on a node is optional and groups related nodes, e.g. "Frontend", "Payments".
+- Every edge "from" and "to" must exactly match a node "label".
+- Keep each label to the real product/component name, and include every connection.
+
+My system:
+[Describe your apps, services, databases, external parties, and how requests, data and money flow between them.]`
+
 export type ParsedImport = {
   name: string
   description: string | null

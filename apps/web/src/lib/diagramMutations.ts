@@ -36,18 +36,18 @@ export type ImportResult = {
   warnings: string[]
 }
 
-/** Create a diagram from an uploaded JSON file (app export or simple format):
- *  parse + validate, create the diagram, persist its contents, refresh the list. */
+/** Create a diagram from JSON text (pasted or read from a file; app export or
+ *  simple format): parse + validate, create the diagram, persist it, refresh. */
 export function useImportDiagram(companyId: string) {
   const qc = useQueryClient()
-  return useMutation<ImportResult, Error, File>({
-    mutationFn: async (file) => {
+  return useMutation<ImportResult, Error, string>({
+    mutationFn: async (text) => {
       if (DEMO) throw new ApiError(503, 'This is a read-only demo — changes are not saved.')
       let raw: unknown
       try {
-        raw = JSON.parse(await file.text())
+        raw = JSON.parse(text)
       } catch {
-        throw new Error("That file isn't valid JSON.")
+        throw new Error("That isn't valid JSON.")
       }
       const parsed = parseImport(raw)
       const diagram = await api.createDiagram(companyId, {

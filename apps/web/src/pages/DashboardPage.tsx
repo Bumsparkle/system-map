@@ -13,10 +13,11 @@ import { Textarea } from '@/components/ui/textarea'
 import { useCompanies, useCreateCompany, useCreateDiagram, useDiagrams } from '@/lib/api'
 import { useAuth } from '@/lib/auth'
 import { useDeleteDiagram, useImportDiagram } from '@/lib/diagramMutations'
+import { AI_IMPORT_PROMPT } from '@/lib/importDiagram'
 import { formatRelativeDate } from '@/lib/utils'
 import { toast } from '@/stores/toastStore'
 import type { Company, Diagram } from '@system-map/shared'
-import { LogOut, Plus, Trash2, Upload } from 'lucide-react'
+import { Check, LogOut, Plus, Sparkles, Trash2, Upload } from 'lucide-react'
 import { type FormEvent, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
@@ -228,20 +229,24 @@ function ImportDiagramDialog({
 }) {
   const importDiagram = useImportDiagram(companyId)
   const inputRef = useRef<HTMLInputElement>(null)
+  const [text, setText] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
 
   function close(next: boolean) {
     if (!next) {
+      setText('')
       setError(null)
+      setCopied(false)
       importDiagram.reset()
     }
     onOpenChange(next)
   }
 
-  function handleFile(file: File | undefined) {
-    if (!file) return
+  function runImport(json: string) {
+    if (!json.trim()) return
     setError(null)
-    importDiagram.mutate(file, {
+    importDiagram.mutate(json, {
       onSuccess: (res) => {
         toast({
           message: res.warnings.length
@@ -255,42 +260,61 @@ function ImportDiagramDialog({
     })
   }
 
+  function copyPrompt() {
+    navigator.clipboard
+      .writeText(AI_IMPORT_PROMPT)
+      .then(() => {
+        setCopied(true)
+        setTimeout(() => setCopied(false), 1500)
+      })
+      .catch(() => toast({ message: 'Could not copy to clipboard', variant: 'error' }))
+  }
+
   return (
     <Dialog open={open} onOpenChange={close}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Import a diagram</DialogTitle>
           <DialogDescription>
-            Upload a JSON file — a System Map export, or a simple file with{' '}
+            Paste or upload JSON — a System Map export, or a simple file with{' '}
             <code className="font-mono text-ink">nodes</code> and{' '}
             <code className="font-mono text-ink">edges</code>.
           </DialogDescription>
         </DialogHeader>
 
-        <button
-          type="button"
-          onClick={() => inputRef.current?.click()}
-          disabled={importDiagram.isPending}
-          className="flex min-h-[7rem] w-full flex-col items-center justify-center gap-2 rounded-[10px] border border-dashed border-border-strong bg-surface text-sm text-ink-muted transition-colors duration-[120ms] ease-out hover:border-accent hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-60"
-        >
-          <Upload className="h-5 w-5" />
-          {importDiagram.isPending ? 'Importing…' : 'Choose a JSON file'}
-        </button>
-        <input
-          ref={inputRef}
-          type="file"
-          accept="application/json,.json"
-          className="hidden"
-          onChange={(e) => {
-            handleFile(e.target.files?.[0])
-            e.target.value = ''
-          }}
+        <div className="flex items-start gap-3 rounded-[10px] border border-border bg-surface-2 p-3">
+          <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
+          <div className="flex-1 text-sm text-ink-muted">
+            No JSON yet? Copy a prompt, describe your system to an AI (ChatGPT, Claude…), then paste
+            its answer below.
+            <div className="mt-2">
+              <Button variant="outline" size="sm" onClick={copyPrompt}>
+                {copied ? <Check className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
+                {copied ? 'Copied' : 'Copy AI prompt'}
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        <Textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder={
+            'Paste JSON here, e.g.\n{ "name": "My map", "nodes": [...], "edges": [...] }'
+          }
+          className="min-h-[8rem] font-mono text-xs"
         />
 
         {error && <p className="text-sm text-red-600">{error}</p>}
 
-        <p className="text-xs text-ink-subtle">
-          New to the format?{' '}
+        <div className="flex items-center justify-between text-xs text-ink-subtle">
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            className="font-medium text-ink-muted hover:text-accent"
+          >
+            …or choose a .json file
+          </button>
           <button
             type="button"
             onClick={downloadExample}
@@ -298,12 +322,31 @@ function ImportDiagramDialog({
           >
             Download an example
           </button>
-          .
-        </p>
+        </div>
+        <input
+          ref={inputRef}
+          type="file"
+          accept="application/json,.json"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0]
+            e.target.value = ''
+            if (file) {
+              setError(null)
+              file.text().then(setText)
+            }
+          }}
+        />
 
         <DialogFooter>
           <Button variant="ghost" onClick={() => close(false)}>
             Cancel
+          </Button>
+          <Button
+            onClick={() => runImport(text)}
+            disabled={!text.trim() || importDiagram.isPending}
+          >
+            {importDiagram.isPending ? 'Importing…' : 'Import'}
           </Button>
         </DialogFooter>
       </DialogContent>
