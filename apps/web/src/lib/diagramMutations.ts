@@ -1,5 +1,7 @@
-import { ApiError, qk } from '@/lib/api'
+import { ApiError, api, qk } from '@/lib/api'
 import { API_URL } from '@/lib/apiBase'
+import { saveDiagram } from '@/lib/autoSave'
+import { parseImport } from '@/lib/importDiagram'
 import { authHeaders } from '@/lib/supabaseClient'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
@@ -23,6 +25,38 @@ export function useDeleteDiagram(companyId: string) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: deleteDiagram,
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.diagrams(companyId) }),
+  })
+}
+
+export type ImportResult = {
+  id: string
+  name: string
+  format: 'export' | 'simple'
+  warnings: string[]
+}
+
+/** Create a diagram from an uploaded JSON file (app export or simple format):
+ *  parse + validate, create the diagram, persist its contents, refresh the list. */
+export function useImportDiagram(companyId: string) {
+  const qc = useQueryClient()
+  return useMutation<ImportResult, Error, File>({
+    mutationFn: async (file) => {
+      if (DEMO) throw new ApiError(503, 'This is a read-only demo — changes are not saved.')
+      let raw: unknown
+      try {
+        raw = JSON.parse(await file.text())
+      } catch {
+        throw new Error("That file isn't valid JSON.")
+      }
+      const parsed = parseImport(raw)
+      const diagram = await api.createDiagram(companyId, {
+        name: parsed.name,
+        description: parsed.description ?? undefined,
+      })
+      await saveDiagram(diagram.id, parsed.payload)
+      return { id: diagram.id, name: parsed.name, format: parsed.format, warnings: parsed.warnings }
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: qk.diagrams(companyId) }),
   })
 }

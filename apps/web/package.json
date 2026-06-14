@@ -31,6 +31,7 @@
     "react-hotkeys-hook": "^4.6.1",
     "react-router-dom": "^6.28.1",
     "tailwind-merge": "^2.6.0",
+    "zod": "^3.25.76",
     "zundo": "^2.3.0",
     "zustand": "^5.0.2"
   },

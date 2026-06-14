@@ -12,11 +12,12 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useCompanies, useCreateCompany, useCreateDiagram, useDiagrams } from '@/lib/api'
 import { useAuth } from '@/lib/auth'
-import { useDeleteDiagram } from '@/lib/diagramMutations'
+import { useDeleteDiagram, useImportDiagram } from '@/lib/diagramMutations'
 import { formatRelativeDate } from '@/lib/utils'
+import { toast } from '@/stores/toastStore'
 import type { Company, Diagram } from '@system-map/shared'
-import { LogOut, Plus, Trash2 } from 'lucide-react'
-import { type FormEvent, useState } from 'react'
+import { LogOut, Plus, Trash2, Upload } from 'lucide-react'
+import { type FormEvent, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 export function DashboardPage() {
@@ -97,6 +98,7 @@ function AccountMenu() {
 function CompanySection({ company }: { company: Company }) {
   const diagrams = useDiagrams(company.id)
   const [newDiagramOpen, setNewDiagramOpen] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<Diagram | null>(null)
   const navigate = useNavigate()
 
@@ -111,10 +113,16 @@ function CompanySection({ company }: { company: Company }) {
             </span>
           )}
         </div>
-        <Button variant="outline" size="sm" onClick={() => setNewDiagramOpen(true)}>
-          <Plus className="h-4 w-4" />
-          New diagram
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" onClick={() => setImportOpen(true)}>
+            <Upload className="h-4 w-4" />
+            Import JSON
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setNewDiagramOpen(true)}>
+            <Plus className="h-4 w-4" />
+            New diagram
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -162,12 +170,144 @@ function CompanySection({ company }: { company: Company }) {
         onCreated={(id) => navigate(`/diagrams/${id}`)}
       />
 
+      <ImportDiagramDialog
+        companyId={company.id}
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        onImported={(id) => navigate(`/diagrams/${id}`)}
+      />
+
       <DeleteDiagramDialog
         companyId={company.id}
         diagram={deleteTarget}
         onOpenChange={(open) => !open && setDeleteTarget(null)}
       />
     </section>
+  )
+}
+
+const EXAMPLE_IMPORT = {
+  name: 'Example map',
+  nodes: [
+    { label: 'Customer', type: 'external_entity' },
+    { label: 'Web App', type: 'app' },
+    { label: 'API Gateway', type: 'system' },
+    { label: 'Stripe', type: 'app', category: 'Payments' },
+    { label: 'Postgres', type: 'data_source' },
+  ],
+  edges: [
+    { from: 'Customer', to: 'Web App', label: 'visits', type: 'data' },
+    { from: 'Web App', to: 'API Gateway', label: 'REST', type: 'api' },
+    { from: 'API Gateway', to: 'Stripe', label: 'charge', type: 'api' },
+    { from: 'API Gateway', to: 'Postgres', label: 'reads / writes', type: 'data' },
+  ],
+}
+
+function downloadExample() {
+  const blob = new Blob([JSON.stringify(EXAMPLE_IMPORT, null, 2)], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = 'system-map-example.json'
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
+}
+
+function ImportDiagramDialog({
+  companyId,
+  open,
+  onOpenChange,
+  onImported,
+}: {
+  companyId: string
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onImported: (id: string) => void
+}) {
+  const importDiagram = useImportDiagram(companyId)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  function close(next: boolean) {
+    if (!next) {
+      setError(null)
+      importDiagram.reset()
+    }
+    onOpenChange(next)
+  }
+
+  function handleFile(file: File | undefined) {
+    if (!file) return
+    setError(null)
+    importDiagram.mutate(file, {
+      onSuccess: (res) => {
+        toast({
+          message: res.warnings.length
+            ? `Imported "${res.name}" — ${res.warnings.join(' ')}`
+            : `Imported "${res.name}"`,
+        })
+        close(false)
+        onImported(res.id)
+      },
+      onError: (err) => setError(err instanceof Error ? err.message : 'Import failed.'),
+    })
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={close}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Import a diagram</DialogTitle>
+          <DialogDescription>
+            Upload a JSON file — a System Map export, or a simple file with{' '}
+            <code className="font-mono text-ink">nodes</code> and{' '}
+            <code className="font-mono text-ink">edges</code>.
+          </DialogDescription>
+        </DialogHeader>
+
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          disabled={importDiagram.isPending}
+          className="flex min-h-[7rem] w-full flex-col items-center justify-center gap-2 rounded-[10px] border border-dashed border-border-strong bg-surface text-sm text-ink-muted transition-colors duration-[120ms] ease-out hover:border-accent hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-60"
+        >
+          <Upload className="h-5 w-5" />
+          {importDiagram.isPending ? 'Importing…' : 'Choose a JSON file'}
+        </button>
+        <input
+          ref={inputRef}
+          type="file"
+          accept="application/json,.json"
+          className="hidden"
+          onChange={(e) => {
+            handleFile(e.target.files?.[0])
+            e.target.value = ''
+          }}
+        />
+
+        {error && <p className="text-sm text-red-600">{error}</p>}
+
+        <p className="text-xs text-ink-subtle">
+          New to the format?{' '}
+          <button
+            type="button"
+            onClick={downloadExample}
+            className="font-medium text-accent hover:underline"
+          >
+            Download an example
+          </button>
+          .
+        </p>
+
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => close(false)}>
+            Cancel
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }
 
