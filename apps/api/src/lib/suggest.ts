@@ -1,11 +1,11 @@
-import Anthropic from '@anthropic-ai/sdk'
 import { type AiSuggestResponse, aiSuggestResponseSchema } from '@system-map/shared'
+import OpenAI from 'openai'
 import { env } from '../env.js'
 import { HttpError } from './errors.js'
 
-/** True when AI suggestions are wired up (ANTHROPIC_API_KEY set). */
+/** True when AI suggestions are wired up (OPENAI_API_KEY set). */
 export function aiConfigured(): boolean {
-  return Boolean(env.ANTHROPIC_API_KEY)
+  return Boolean(env.OPENAI_API_KEY)
 }
 
 /** Compact, label-based view of a diagram for the model. */
@@ -56,18 +56,19 @@ const SUGGEST_SCHEMA = {
 }
 
 /**
- * Ask Claude for improvement suggestions for a system map. Uses structured
- * outputs so the response is guaranteed to match the schema. Model: Opus 4.8.
+ * Ask OpenAI for improvement suggestions for a system map. Uses strict
+ * structured outputs so the response is guaranteed to match the schema.
+ * Model defaults to gpt-4o; override with OPENAI_MODEL.
  */
 export async function suggestForMap(map: MapForAI): Promise<AiSuggestResponse> {
   // Bound the call so a slow/retried request fails inside Vercel's 30s function
   // limit as a clean error rather than an opaque 504.
-  const client = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY, timeout: 25_000, maxRetries: 1 })
-  const response = await client.messages.create({
-    model: 'claude-opus-4-8',
-    max_tokens: 4096,
-    system: SYSTEM,
+  const client = new OpenAI({ apiKey: env.OPENAI_API_KEY, timeout: 25_000, maxRetries: 1 })
+  const response = await client.chat.completions.create({
+    model: env.OPENAI_MODEL ?? 'gpt-4o',
+    max_completion_tokens: 4096,
     messages: [
+      { role: 'system', content: SYSTEM },
       {
         role: 'user',
         content: `Here is the system map "${map.name}" as JSON:\n\n${JSON.stringify(
@@ -77,17 +78,20 @@ export async function suggestForMap(map: MapForAI): Promise<AiSuggestResponse> {
         )}\n\nSuggest the highest-value improvements, especially automating manual steps and where AI agents would help.`,
       },
     ],
-    // Structured outputs (GA): constrain the response to our schema.
-    output_config: { format: { type: 'json_schema', schema: SUGGEST_SCHEMA } },
-  } as Anthropic.MessageCreateParamsNonStreaming)
+    // Strict structured outputs constrain the response to our schema.
+    response_format: {
+      type: 'json_schema',
+      json_schema: { name: 'suggestions', strict: true, schema: SUGGEST_SCHEMA },
+    },
+  })
 
-  if (response.stop_reason === 'refusal') {
+  const choice = response.choices[0]
+  if (choice?.message.refusal) {
     throw new HttpError(502, 'The AI declined to answer for this map.')
   }
-  const text = response.content.find((b) => b.type === 'text')
-  const raw = text && 'text' in text ? text.text : ''
+  const raw = choice?.message.content ?? ''
   try {
-    // A truncated (max_tokens) or empty response yields invalid JSON — fail clean.
+    // A truncated (length) or empty response yields invalid JSON — fail clean.
     return aiSuggestResponseSchema.parse(JSON.parse(raw))
   } catch {
     throw new HttpError(502, 'The AI response was incomplete — please try again.')

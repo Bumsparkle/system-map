@@ -111,7 +111,7 @@ export const diagramRoutes: FastifyPluginAsync = async (app) => {
     const { id } = req.params as { id: string }
     await assertDiagramOwned(id, req.user.id)
     if (!aiConfigured()) {
-      throw new HttpError(503, "AI suggestions aren't set up yet — add an ANTHROPIC_API_KEY.")
+      throw new HttpError(503, "AI suggestions aren't set up yet — add an OPENAI_API_KEY.")
     }
 
     const [[diagram], nodes, edges] = await Promise.all([
