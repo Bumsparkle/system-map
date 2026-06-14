@@ -1,3 +1,4 @@
+import type { PreviewDelta } from '@/lib/previewDelta'
 import { create } from 'zustand'
 
 export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
@@ -49,6 +50,10 @@ type UiStore = {
   // Current/future-state toggle (spec v1.3 §3). Persisted per-diagram by useUrlSync.
   diagramState: DiagramStateView
   setDiagramState: (state: DiagramStateView) => void
+  // Faded "after" preview of an AI suggestion drawn over the canvas. Session-only;
+  // null when nothing is being previewed. Cleared on Apply/Discard and on unmount.
+  previewDelta: PreviewDelta | null
+  setPreviewDelta: (delta: PreviewDelta | null) => void
 }
 
 export const useUiStore = create<UiStore>((set) => ({
@@ -98,4 +103,6 @@ export const useUiStore = create<UiStore>((set) => ({
     })),
   diagramState: 'current',
   setDiagramState: (diagramState) => set({ diagramState }),
+  previewDelta: null,
+  setPreviewDelta: (previewDelta) => set({ previewDelta }),
 }))

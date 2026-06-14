@@ -27,7 +27,77 @@ For each suggestion:
 - Choose the best "category": "ai-agent" (an AI agent replaces/augments a human step), "automation" (a non-AI integration/automation removes manual work), "integration" (connect two things that should talk), "consolidation" (replace/merge overlapping tools), "resilience" (single points of failure, missing redundancy), or "cost" (reduce spend).
 - Rate "impact" as high, medium, or low.
 
-Return 4-8 suggestions, best first. Lead with automation and AI-agent opportunities. If the map is tiny, return fewer but still useful suggestions.`
+ALSO fill "preview" with the concrete edit that realises the suggestion, so it can be drawn on the canvas as a faded "after" state and applied in one click. Reference existing nodes by their EXACT label; introduce new nodes in "addNodes" and reference them by the label you gave them.
+- "addNodes": new nodes to create — e.g. an "AI agent" or "Integration service" node. Pick the closest "type": app, system, data_source, external_entity, cash, group, or custom (use "app" for a SaaS/tool, "system" for an internal service or AI agent).
+- "addEdges": new flows. "from"/"to" are node labels (existing or newly-added). "flow" is data, cash, api, manual, event, or custom. "label" can be a short verb phrase or "".
+- "removeNodes" / "removeEdges": things to retire (consolidation/resilience). Only reference nodes/flows that exist.
+- "updateEdges": flows whose type should change, e.g. a "manual" handoff becoming "api".
+- Leave any array empty when the suggestion has no structural change (e.g. a pure cost renegotiation). Prefer additive previews (new nodes/edges) — they are the most useful to follow.
+
+Return 3-6 suggestions, best first. Lead with automation and AI-agent opportunities. If the map is tiny, return fewer but still useful suggestions.`
+
+const NODE_TYPES = ['app', 'system', 'data_source', 'external_entity', 'cash', 'group', 'custom']
+const FLOW_TYPES = ['data', 'cash', 'api', 'manual', 'event', 'custom']
+
+// OpenAI strict mode requires every property to appear in `required` and
+// additionalProperties:false everywhere — so the preview's arrays are always
+// present (each may be empty).
+const PREVIEW_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    addNodes: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          label: { type: 'string' },
+          type: { type: 'string', enum: NODE_TYPES },
+        },
+        required: ['label', 'type'],
+      },
+    },
+    addEdges: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          from: { type: 'string' },
+          to: { type: 'string' },
+          flow: { type: 'string', enum: FLOW_TYPES },
+          label: { type: 'string' },
+        },
+        required: ['from', 'to', 'flow', 'label'],
+      },
+    },
+    removeNodes: { type: 'array', items: { type: 'string' } },
+    removeEdges: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        properties: { from: { type: 'string' }, to: { type: 'string' } },
+        required: ['from', 'to'],
+      },
+    },
+    updateEdges: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          from: { type: 'string' },
+          to: { type: 'string' },
+          newFlow: { type: 'string', enum: FLOW_TYPES },
+        },
+        required: ['from', 'to', 'newFlow'],
+      },
+    },
+  },
+  required: ['addNodes', 'addEdges', 'removeNodes', 'removeEdges', 'updateEdges'],
+}
 
 const SUGGEST_SCHEMA = {
   type: 'object',
@@ -47,8 +117,9 @@ const SUGGEST_SCHEMA = {
           },
           impact: { type: 'string', enum: ['high', 'medium', 'low'] },
           targets: { type: 'array', items: { type: 'string' } },
+          preview: PREVIEW_SCHEMA,
         },
-        required: ['title', 'detail', 'category', 'impact', 'targets'],
+        required: ['title', 'detail', 'category', 'impact', 'targets', 'preview'],
       },
     },
   },
@@ -61,12 +132,13 @@ const SUGGEST_SCHEMA = {
  * Model defaults to gpt-4o; override with OPENAI_MODEL.
  */
 export async function suggestForMap(map: MapForAI): Promise<AiSuggestResponse> {
-  // Bound the call so a slow/retried request fails inside Vercel's 30s function
-  // limit as a clean error rather than an opaque 504.
-  const client = new OpenAI({ apiKey: env.OPENAI_API_KEY, timeout: 25_000, maxRetries: 1 })
+  // Bound the call so it fails cleanly inside Vercel's 30s function limit. No
+  // retry — a second attempt would risk blowing past 30s into an opaque 504.
+  const client = new OpenAI({ apiKey: env.OPENAI_API_KEY, timeout: 24_000, maxRetries: 0 })
   const response = await client.chat.completions.create({
     model: env.OPENAI_MODEL ?? 'gpt-4o',
-    max_completion_tokens: 4096,
+    // Each suggestion now carries a change-set; give headroom before truncation.
+    max_completion_tokens: 7000,
     messages: [
       { role: 'system', content: SYSTEM },
       {

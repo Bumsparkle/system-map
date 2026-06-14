@@ -5,6 +5,7 @@ import { DND_MIME } from '@/lib/dnd'
 import { edgeTypes } from '@/lib/edgeRegistry'
 import type { SMEdge, SMNode } from '@/lib/flow'
 import { nodeTypes } from '@/lib/nodeRegistry'
+import { PREVIEW_PREFIX } from '@/lib/previewDelta'
 import { useDiagramStore } from '@/stores/diagramStore'
 import { useUiStore } from '@/stores/uiStore'
 import type { NodeType } from '@system-map/shared'
@@ -32,6 +33,7 @@ export function Canvas() {
   const nodes = useDiagramStore((s) => s.nodes)
   const edges = useDiagramStore((s) => s.edges)
   const layers = useDiagramStore((s) => s.layers)
+  const activeLayerId = useDiagramStore((s) => s.activeLayerId)
   const views = useDiagramStore((s) => s.views)
   const activeViewId = useDiagramStore((s) => s.activeViewId)
   const onNodesChange = useDiagramStore((s) => s.onNodesChange)
@@ -50,6 +52,7 @@ export function Canvas() {
   const setEditingNode = useUiStore((s) => s.setEditingNode)
   const paletteDragType = useUiStore((s) => s.paletteDragType)
   const diagramState = useUiStore((s) => s.diagramState)
+  const previewDelta = useUiStore((s) => s.previewDelta)
   const { screenToFlowPosition } = useReactFlow()
   const [menu, setMenu] = useState<MenuState | null>(null)
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
@@ -102,7 +105,69 @@ export function Canvas() {
     return ids.size > 0 ? ids : null
   }, [highlightOrphans, nodes, edges])
 
+  // AI-suggestion preview: synthetic ghost nodes/edges for the proposed "after"
+  // state, plus the sets that drive dimming/removal styling. Null when inactive.
+  const previewRender = useMemo(() => {
+    if (!previewDelta) return null
+    const layerId = activeLayerId ?? layers[0]?.id ?? ''
+    const ghostNodes: Node[] = previewDelta.addNodes.map((n) => ({
+      id: n.tempId,
+      type: n.type,
+      position: n.position,
+      data: { label: n.label, fields: {}, layerId },
+      className: 'sm-ghost',
+      draggable: false,
+      selectable: false,
+      deletable: false,
+      connectable: false,
+    }))
+    const ghostEdges: Edge[] = previewDelta.addEdges.map((e) => ({
+      id: e.tempId,
+      source: e.sourceRef,
+      target: e.targetRef,
+      type: 'custom',
+      ...(e.label ? { label: e.label } : {}),
+      data: {
+        direction: 'one_way',
+        color: 'var(--color-accent)',
+        strokeStyle: 'dashed',
+        animated: true,
+      },
+      selectable: false,
+      deletable: false,
+    }))
+    const removeNodeSet = new Set(previewDelta.removeNodeIds)
+    const removeEdgeSet = new Set(previewDelta.removeEdgeIds)
+    const updateFlowById = new Map(previewDelta.updateEdges.map((u) => [u.id, u.newFlow]))
+    // Existing nodes touched by the change stay full-opacity; the rest dim back.
+    const edgeById = new Map(edges.map((e) => [e.id, e]))
+    const involved = new Set<string>(removeNodeSet)
+    for (const e of previewDelta.addEdges) {
+      if (!e.sourceRef.startsWith(PREVIEW_PREFIX)) involved.add(e.sourceRef)
+      if (!e.targetRef.startsWith(PREVIEW_PREFIX)) involved.add(e.targetRef)
+    }
+    for (const id of [...removeEdgeSet, ...updateFlowById.keys()]) {
+      const e = edgeById.get(id)
+      if (e) {
+        involved.add(e.source)
+        involved.add(e.target)
+      }
+    }
+    return { ghostNodes, ghostEdges, removeNodeSet, removeEdgeSet, updateFlowById, involved }
+  }, [previewDelta, activeLayerId, layers, edges])
+
   const rfNodes = useMemo(() => {
+    if (previewRender) {
+      const styled = display.nodes.map((n) => ({
+        ...n,
+        className: previewRender.removeNodeSet.has(n.id)
+          ? 'sm-ghost-remove'
+          : previewRender.involved.has(n.id)
+            ? undefined
+            : 'sm-preview-dim',
+      }))
+      return [...styled, ...previewRender.ghostNodes]
+    }
     if (orphanIds) {
       return display.nodes.map((n) => ({
         ...n,
@@ -115,7 +180,7 @@ export function Canvas() {
       className:
         n.id === focusOrigin ? undefined : focusSets.nodeSet.has(n.id) ? 'sm-focused' : 'sm-dimmed',
     }))
-  }, [display.nodes, focusSets, focusOrigin, orphanIds])
+  }, [display.nodes, focusSets, focusOrigin, orphanIds, previewRender])
 
   // Delta view only: a dashed grey "replaces" arrow from each replacing node to
   // its replacement (spec v1.3 §3.3). Synthetic — never stored in the DB.
@@ -143,6 +208,18 @@ export function Canvas() {
   }, [diagramState, nodes, display.nodes])
 
   const rfEdges = useMemo(() => {
+    if (previewRender) {
+      const styled = display.edges.map((e) => {
+        if (previewRender.removeEdgeSet.has(e.id)) return { ...e, className: 'sm-ghost-remove' }
+        // Re-type a changed flow in place so the canvas shows the "after" style.
+        const newFlow = previewRender.updateFlowById.get(e.id)
+        if (newFlow) return { ...e, type: newFlow }
+        const inContext =
+          previewRender.involved.has(e.source) && previewRender.involved.has(e.target)
+        return inContext ? e : { ...e, className: 'sm-preview-dim' }
+      })
+      return [...styled, ...previewRender.ghostEdges]
+    }
     // In orphan mode every edge connects non-orphans, so dim them all.
     let styled: Edge[]
     if (orphanIds) styled = display.edges.map((e) => ({ ...e, className: 'sm-dimmed' }))
@@ -153,7 +230,7 @@ export function Canvas() {
         className: focusSets.edgeSet.has(e.id) ? 'sm-focused' : 'sm-dimmed',
       }))
     return replacesEdges.length ? [...styled, ...replacesEdges] : styled
-  }, [display.edges, focusSets, orphanIds, replacesEdges])
+  }, [display.edges, focusSets, orphanIds, replacesEdges, previewRender])
 
   const onDragOver = useCallback((event: DragEvent) => {
     event.preventDefault()
@@ -163,14 +240,15 @@ export function Canvas() {
   const onDrop = useCallback(
     (event: DragEvent) => {
       event.preventDefault()
-      if (presenting) return
+      // No new nodes while presenting or reviewing a suggestion preview.
+      if (presenting || previewDelta) return
       const type = event.dataTransfer.getData(DND_MIME) as NodeType
       if (!type) return
       const position = screenToFlowPosition({ x: event.clientX, y: event.clientY })
       const id = addNode(type, { x: position.x - 80, y: position.y - 20 })
       flashNode(id)
     },
-    [screenToFlowPosition, addNode, flashNode, presenting],
+    [screenToFlowPosition, addNode, flashNode, presenting, previewDelta],
   )
 
   const onEdgeContextMenu = useCallback(
@@ -184,11 +262,11 @@ export function Canvas() {
 
   const onNodeMouseEnter = useCallback(
     (_event: MouseEvent, node: Node) => {
-      if (!focusEnabled) return
+      if (!focusEnabled || previewDelta) return
       clearTimeout(hoverTimer.current)
       hoverTimer.current = setTimeout(() => setHoverNode(node.id), 200)
     },
-    [focusEnabled, setHoverNode],
+    [focusEnabled, setHoverNode, previewDelta],
   )
 
   const onNodeMouseLeave = useCallback(() => {
@@ -198,9 +276,10 @@ export function Canvas() {
 
   const onNodeDoubleClick = useCallback(
     (_event: MouseEvent, node: Node) => {
-      if (!presenting) setEditingNode(node.id)
+      // No inline editing while reviewing a suggestion preview.
+      if (!presenting && !previewDelta) setEditingNode(node.id)
     },
-    [presenting, setEditingNode],
+    [presenting, setEditingNode, previewDelta],
   )
 
   const onPaneClick = useCallback(() => {
@@ -233,9 +312,9 @@ export function Canvas() {
         fitViewOptions={{ padding: 0.3, maxZoom: 1 }}
         minZoom={0.2}
         maxZoom={2}
-        nodesDraggable={!presenting}
-        nodesConnectable={!presenting}
-        deleteKeyCode={presenting ? null : ['Backspace', 'Delete']}
+        nodesDraggable={!presenting && !previewDelta}
+        nodesConnectable={!presenting && !previewDelta}
+        deleteKeyCode={presenting || previewDelta ? null : ['Backspace', 'Delete']}
         multiSelectionKeyCode={['Meta', 'Shift']}
         selectionKeyCode={null}
         connectionLineStyle={{ stroke: 'var(--color-accent)', strokeWidth: 2 }}

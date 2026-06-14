@@ -1,6 +1,7 @@
 import { CommandPalette } from '@/components/CommandPalette'
 import { Canvas } from '@/components/canvas/Canvas'
 import { PresentationChrome } from '@/components/canvas/PresentationChrome'
+import { PreviewBanner } from '@/components/canvas/PreviewBanner'
 import { Inspector } from '@/components/inspector/Inspector'
 import { NodePalette } from '@/components/palette/NodePalette'
 import { TopBar } from '@/components/toolbar/TopBar'
@@ -35,6 +36,7 @@ export function EditorPage() {
   const detail = query.data
   const hydrate = useDiagramStore((s) => s.hydrate)
   const reset = useDiagramStore((s) => s.reset)
+  const setPreviewDelta = useUiStore((s) => s.setPreviewDelta)
 
   useEffect(() => {
     if (detail) {
@@ -44,7 +46,14 @@ export function EditorPage() {
     }
   }, [detail, hydrate])
 
-  useEffect(() => () => reset(), [reset])
+  // Drop any in-flight suggestion preview when leaving the editor.
+  useEffect(
+    () => () => {
+      reset()
+      setPreviewDelta(null)
+    },
+    [reset, setPreviewDelta],
+  )
 
   useAutoSave()
 
@@ -56,6 +65,10 @@ export function EditorPage() {
 
 function Editor() {
   const presenting = useUiStore((s) => s.presenting)
+  // While a suggestion preview is on the canvas the editor is in read-only
+  // "review mode": hide the mutation surfaces so the preview can't go stale and
+  // Apply stays a single, clean undo step.
+  const previewing = useUiStore((s) => s.previewDelta !== null)
 
   return (
     <ReactFlowProvider>
@@ -65,12 +78,13 @@ function Editor() {
           {!presenting && <NodePalette />}
           <div className="relative min-w-0 flex-1">
             <Canvas />
+            {!presenting && <PreviewBanner />}
             {presenting && <PresentationChrome />}
           </div>
-          {!presenting && <Inspector />}
+          {!presenting && !previewing && <Inspector />}
         </div>
       </div>
-      {!presenting && <CommandPalette />}
+      {!presenting && !previewing && <CommandPalette />}
     </ReactFlowProvider>
   )
 }

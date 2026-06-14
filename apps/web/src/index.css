@@ -154,6 +154,37 @@
   box-shadow: 0 0 0 1.5px var(--color-accent), var(--shadow-node);
 }
 
+/* AI suggestion preview: a faded "after" overlay (spec: ghost preview).
+   Untouched parts of the map are softly dimmed so the proposal stands out. */
+.react-flow__node.sm-preview-dim,
+.react-flow__edge.sm-preview-dim {
+  opacity: 0.3;
+}
+
+/* Proposed new nodes — accent dashed ghost. */
+.react-flow__node.sm-ghost {
+  opacity: 0.78;
+}
+.react-flow__node.sm-ghost .sm-node-shell {
+  border-style: dashed;
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+  box-shadow: 0 0 0 1.5px var(--color-accent), var(--shadow-node);
+}
+
+/* Nodes/edges the proposal removes — faded red dashed. */
+.react-flow__node.sm-ghost-remove {
+  opacity: 0.6;
+}
+.react-flow__node.sm-ghost-remove .sm-node-shell {
+  border-style: dashed;
+  border-color: var(--color-status-retiring);
+  box-shadow: 0 0 0 1.5px var(--color-status-retiring), var(--shadow-node);
+}
+.react-flow__edge.sm-ghost-remove {
+  opacity: 0.55;
+}
+
 /* Skeleton shimmer for the vendor-loading state (spec v1.2 §4.2/§5) */
 @keyframes sm-shimmer {
   0% {

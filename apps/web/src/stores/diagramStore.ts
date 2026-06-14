@@ -1,6 +1,7 @@
 import { type SMEdge, type SMNode, toFlowEdge, toFlowNode } from '@/lib/flow'
 import { nextLayerColor } from '@/lib/layerColors'
 import { NODE_DEFAULT_LABEL } from '@/lib/nodeRegistry'
+import type { PreviewDelta } from '@/lib/previewDelta'
 import type {
   DiagramDetail,
   EdgeData,
@@ -60,6 +61,7 @@ type DiagramStore = {
   addNode: (type: NodeType, position: XYPosition, data?: Partial<NodeData>) => string
   updateNodeData: (id: string, patch: Partial<NodeData>) => void
   removeNode: (id: string) => void
+  applyPreview: (delta: PreviewDelta) => void
   duplicateSelected: () => void
   applyLayout: (positions: Record<string, { x: number; y: number }>) => void
   selectNode: (id: string) => void
@@ -265,6 +267,70 @@ export const useDiagramStore = create<DiagramStore>()(
           nodes: s.nodes.filter((n) => n.id !== id),
           edges: s.edges.filter((e) => e.source !== id && e.target !== id),
         })),
+
+      // Commit a resolved AI-suggestion preview in a single step (one undo entry,
+      // reversible with Cmd+Z). Adds/removes nodes & edges and re-types flows;
+      // new nodes get fresh ids and their ghost-edge refs are re-pointed.
+      applyPreview: (delta) =>
+        set((s) => {
+          const layerId = s.activeLayerId ?? s.layers[0]?.id ?? ''
+          const idMap = new Map<string, string>()
+          const newNodes: SMNode[] = delta.addNodes.map((n) => {
+            const id = nanoid()
+            idMap.set(n.tempId, id)
+            return {
+              id,
+              type: n.type,
+              position: n.position,
+              selected: false,
+              ...(n.type === 'group' ? { width: 280, height: 180 } : {}),
+              data: { label: n.label, fields: {}, layerId },
+            }
+          })
+
+          const removeNodeSet = new Set(delta.removeNodeIds)
+          const removeEdgeSet = new Set(delta.removeEdgeIds)
+          const newFlowById = new Map(delta.updateEdges.map((u) => [u.id, u.newFlow]))
+
+          const keptNodes = s.nodes
+            .filter((n) => !removeNodeSet.has(n.id))
+            .map((n) => (n.selected ? { ...n, selected: false } : n))
+          const nodes = [...keptNodes, ...newNodes]
+
+          // Resolve a ghost ref to a real id (new node tempId → fresh id, else as-is).
+          const resolve = (ref: string) => idMap.get(ref) ?? ref
+          const finalIds = new Set(nodes.map((n) => n.id))
+          const newEdges: SMEdge[] = delta.addEdges.flatMap((e) => {
+            const source = resolve(e.sourceRef)
+            const target = resolve(e.targetRef)
+            if (!finalIds.has(source) || !finalIds.has(target) || source === target) return []
+            return [
+              {
+                id: nanoid(),
+                source,
+                target,
+                type: e.flow,
+                ...(e.label ? { label: e.label } : {}),
+                data: { direction: 'one_way' as const },
+              },
+            ]
+          })
+
+          const keptEdges = s.edges
+            .filter(
+              (e) =>
+                !removeEdgeSet.has(e.id) &&
+                !removeNodeSet.has(e.source) &&
+                !removeNodeSet.has(e.target),
+            )
+            .map((e) => {
+              const next = newFlowById.get(e.id)
+              const retyped = next ? { ...e, type: next } : e
+              return retyped.selected ? { ...retyped, selected: false } : retyped
+            })
+
+          return { nodes, edges: [...keptEdges, ...newEdges] }
+        }),
 
       updateEdgeData: (id, patch) =>
         set((s) => ({

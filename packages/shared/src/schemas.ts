@@ -421,6 +421,29 @@ export type AiSuggestionCategory = z.infer<typeof aiSuggestionCategorySchema>
 export const aiSuggestionImpactSchema = z.enum(['high', 'medium', 'low'])
 export type AiSuggestionImpact = z.infer<typeof aiSuggestionImpactSchema>
 
+/**
+ * A concrete, label-referenced change-set that realises a suggestion. The model
+ * sees node labels (not ids), so everything here is by label; the frontend
+ * resolves labels back to ids to draw a faded "after" preview and to apply it.
+ * New nodes are introduced in `addNodes` and may be referenced by label in
+ * `addEdges`. Any array may be empty when a suggestion has no structural change.
+ */
+export const aiSuggestionPreviewSchema = z.object({
+  /** Brand-new nodes to add (label is also how addEdges references them). */
+  addNodes: z.array(z.object({ label: z.string(), type: nodeTypeSchema })),
+  /** New flows; `from`/`to` are labels of existing or newly-added nodes. */
+  addEdges: z.array(
+    z.object({ from: z.string(), to: z.string(), flow: flowTypeSchema, label: z.string() }),
+  ),
+  /** Labels of existing nodes the suggestion proposes to remove. */
+  removeNodes: z.array(z.string()),
+  /** Existing flows to remove, by endpoint labels. */
+  removeEdges: z.array(z.object({ from: z.string(), to: z.string() })),
+  /** Existing flows whose type changes (e.g. a manual handoff → api). */
+  updateEdges: z.array(z.object({ from: z.string(), to: z.string(), newFlow: flowTypeSchema })),
+})
+export type AiSuggestionPreview = z.infer<typeof aiSuggestionPreviewSchema>
+
 export const aiSuggestionSchema = z.object({
   title: z.string(),
   detail: z.string(),
@@ -428,6 +451,8 @@ export const aiSuggestionSchema = z.object({
   impact: aiSuggestionImpactSchema,
   /** Node labels the suggestion relates to. */
   targets: z.array(z.string()),
+  /** Concrete edit to preview/apply on the canvas (optional for resilience). */
+  preview: aiSuggestionPreviewSchema.optional(),
 })
 export type AiSuggestion = z.infer<typeof aiSuggestionSchema>
 

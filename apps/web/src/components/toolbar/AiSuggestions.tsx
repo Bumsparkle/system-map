@@ -8,13 +8,18 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { useSuggestions } from '@/lib/aiApi'
+import { makeVisibilityPredicate, nodeInState } from '@/lib/displayGraph'
+import { buildPreviewDelta, hasPreview, isPreviewDeltaEmpty } from '@/lib/previewDelta'
+import { useDiagramStore } from '@/stores/diagramStore'
+import { toast } from '@/stores/toastStore'
+import { useUiStore } from '@/stores/uiStore'
 import type {
   AiSuggestResponse,
   AiSuggestion,
   AiSuggestionCategory,
   AiSuggestionImpact,
 } from '@system-map/shared'
-import { RefreshCw, Sparkles } from 'lucide-react'
+import { Eye, RefreshCw, Sparkles } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 
@@ -39,6 +44,13 @@ export function AiSuggestions() {
   const { diagramId } = useParams()
   const [open, setOpen] = useState(false)
   const suggest = useSuggestions(diagramId ?? '')
+  const nodes = useDiagramStore((s) => s.nodes)
+  const edges = useDiagramStore((s) => s.edges)
+  const layers = useDiagramStore((s) => s.layers)
+  const views = useDiagramStore((s) => s.views)
+  const activeViewId = useDiagramStore((s) => s.activeViewId)
+  const diagramState = useUiStore((s) => s.diagramState)
+  const setPreviewDelta = useUiStore((s) => s.setPreviewDelta)
 
   // Keep the last result on screen while a regenerate is in flight, so the
   // dialog doesn't flash back to the loading state (the mutation clears its
@@ -52,8 +64,34 @@ export function AiSuggestions() {
   if (DEMO) return null
 
   function start() {
+    // Clear any ghost still showing from a previous preview before reopening.
+    setPreviewDelta(null)
     setOpen(true)
     if (!suggest.data && !suggest.isPending) suggest.mutate()
+  }
+
+  // Draw the suggestion's "after" state as a faded ghost on the canvas, and step
+  // out of the way so it's visible (the banner takes over from here). Resolve
+  // against the *visible* graph so ghosts never reference filtered-out nodes.
+  function preview(s: AiSuggestion) {
+    const activeView = views.find((v) => v.id === activeViewId) ?? null
+    const isVisible = makeVisibilityPredicate(layers, activeView)
+    const visibleNodes = nodes.filter(
+      (n) => isVisible(n) && nodeInState(n.data.lifecycle ?? 'existing', diagramState),
+    )
+    const visibleIds = new Set(visibleNodes.map((n) => n.id))
+    const visibleEdges = edges.filter((e) => visibleIds.has(e.source) && visibleIds.has(e.target))
+
+    const delta = buildPreviewDelta(s, visibleNodes, visibleEdges)
+    if (isPreviewDeltaEmpty(delta)) {
+      toast({
+        message: "This suggestion doesn't map to specific nodes on the current view.",
+        variant: 'error',
+      })
+      return
+    }
+    setPreviewDelta(delta)
+    setOpen(false)
   }
 
   return (
@@ -100,7 +138,11 @@ export function AiSuggestions() {
                   </p>
                 ) : (
                   shown.suggestions.map((s) => (
-                    <SuggestionCard key={`${s.category}:${s.title}`} suggestion={s} />
+                    <SuggestionCard
+                      key={`${s.category}:${s.title}`}
+                      suggestion={s}
+                      onPreview={hasPreview(s) ? () => preview(s) : undefined}
+                    />
                   ))
                 )}
               </div>
@@ -135,7 +177,13 @@ export function AiSuggestions() {
   )
 }
 
-function SuggestionCard({ suggestion }: { suggestion: AiSuggestion }) {
+function SuggestionCard({
+  suggestion,
+  onPreview,
+}: {
+  suggestion: AiSuggestion
+  onPreview?: () => void
+}) {
   const cat = CATEGORY[suggestion.category]
   return (
     <div className="rounded-[10px] border border-border bg-surface p-3.5">
@@ -160,6 +208,14 @@ function SuggestionCard({ suggestion }: { suggestion: AiSuggestion }) {
               {t}
             </span>
           ))}
+        </div>
+      )}
+      {onPreview && (
+        <div className="mt-3">
+          <Button size="sm" variant="outline" onClick={onPreview}>
+            <Eye className="h-4 w-4" />
+            Preview on canvas
+          </Button>
         </div>
       )}
     </div>
