@@ -3,13 +3,19 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
 import { useSuggestions } from '@/lib/aiApi'
-import type { AiSuggestion, AiSuggestionCategory, AiSuggestionImpact } from '@system-map/shared'
-import { Sparkles } from 'lucide-react'
-import { useState } from 'react'
+import type {
+  AiSuggestResponse,
+  AiSuggestion,
+  AiSuggestionCategory,
+  AiSuggestionImpact,
+} from '@system-map/shared'
+import { RefreshCw, Sparkles } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 
 const DEMO = import.meta.env.VITE_DEMO === '1'
@@ -33,6 +39,14 @@ export function AiSuggestions() {
   const { diagramId } = useParams()
   const [open, setOpen] = useState(false)
   const suggest = useSuggestions(diagramId ?? '')
+
+  // Keep the last result on screen while a regenerate is in flight, so the
+  // dialog doesn't flash back to the loading state (the mutation clears its
+  // own `data` the moment it re-fires).
+  const [shown, setShown] = useState<AiSuggestResponse | null>(null)
+  useEffect(() => {
+    if (suggest.data) setShown(suggest.data)
+  }, [suggest.data])
 
   // The static demo has no backend to call.
   if (DEMO) return null
@@ -62,11 +76,12 @@ export function AiSuggestions() {
           </DialogHeader>
 
           <div className="-mr-2 max-h-[60vh] overflow-y-auto pr-2">
-            {suggest.isPending && (
+            {/* First load (nothing to fall back to yet). */}
+            {suggest.isPending && !shown && (
               <p className="py-10 text-center text-sm text-ink-subtle">Analysing your map…</p>
             )}
 
-            {suggest.isError && (
+            {suggest.isError && !shown && (
               <div className="rounded-[10px] border border-border bg-surface-2 p-4 text-sm text-ink-muted">
                 {suggest.error.message}
                 <div className="mt-3">
@@ -77,20 +92,43 @@ export function AiSuggestions() {
               </div>
             )}
 
-            {suggest.data && (
+            {shown && (
               <div className="flex flex-col gap-3">
-                {suggest.data.suggestions.length === 0 ? (
+                {shown.suggestions.length === 0 ? (
                   <p className="py-10 text-center text-sm text-ink-subtle">
                     No suggestions — your map looks tidy.
                   </p>
                 ) : (
-                  suggest.data.suggestions.map((s) => (
+                  shown.suggestions.map((s) => (
                     <SuggestionCard key={`${s.category}:${s.title}`} suggestion={s} />
                   ))
                 )}
               </div>
             )}
           </div>
+
+          {/* Regenerate: the model is non-deterministic, so a fresh pull can
+              surface different ideas. Available once a first result is in. */}
+          {shown && (
+            <DialogFooter className="items-center justify-between">
+              <span className="text-[11px] text-ink-subtle">
+                {suggest.isError ? (
+                  <span className="text-rose-600">Couldn't refresh — showing the last result.</span>
+                ) : (
+                  `${shown.suggestions.length} ${shown.suggestions.length === 1 ? 'suggestion' : 'suggestions'}`
+                )}
+              </span>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => suggest.mutate()}
+                disabled={suggest.isPending}
+              >
+                <RefreshCw className={`h-4 w-4 ${suggest.isPending ? 'animate-spin' : ''}`} />
+                {suggest.isPending ? 'Regenerating…' : 'Regenerate'}
+              </Button>
+            </DialogFooter>
+          )}
         </DialogContent>
       </Dialog>
     </>
