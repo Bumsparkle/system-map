@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils'
 import { useUiStore } from '@/stores/uiStore'
 import { ArrowLeft, Play } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { AiSuggestions } from './AiSuggestions'
 import { DiagramTitle } from './DiagramTitle'
 import { ExportMenu } from './ExportMenu'
 import { LayerPanel } from './LayerPanel'
@@ -29,6 +30,7 @@ export function TopBar() {
       <div className="ml-auto flex items-center gap-3">
         <SaveIndicator />
         <ViewSelector />
+        <AiSuggestions />
         <Button
           variant="outline"
           size="sm"

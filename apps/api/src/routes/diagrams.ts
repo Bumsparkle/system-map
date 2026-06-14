@@ -4,7 +4,8 @@ import type { FastifyPluginAsync } from 'fastify'
 import { nanoid } from 'nanoid'
 import { db, schema } from '../db/client.js'
 import { assertCompanyOwned, assertDiagramOwned } from '../lib/authz.js'
-import { notFound } from '../lib/errors.js'
+import { HttpError, notFound } from '../lib/errors.js'
+import { type MapForAI, aiConfigured, suggestForMap } from '../lib/suggest.js'
 
 // Default "Main" layer uses the accent (burnt sienna) as its indicator color.
 const DEFAULT_LAYER_COLOR = '#D4471F'
@@ -102,5 +103,45 @@ export const diagramRoutes: FastifyPluginAsync = async (app) => {
     if (!row) throw notFound('Diagram')
     reply.code(204)
     return null
+  })
+
+  // AI improvement suggestions: send the map to an LLM and return structured
+  // suggestions, especially automating manual steps / where AI agents help.
+  app.post('/diagrams/:id/suggest', async (req) => {
+    const { id } = req.params as { id: string }
+    await assertDiagramOwned(id, req.user.id)
+    if (!aiConfigured()) {
+      throw new HttpError(503, "AI suggestions aren't set up yet — add an ANTHROPIC_API_KEY.")
+    }
+
+    const [[diagram], nodes, edges] = await Promise.all([
+      db
+        .select({ name: schema.diagrams.name })
+        .from(schema.diagrams)
+        .where(eq(schema.diagrams.id, id)),
+      db.select().from(schema.nodes).where(eq(schema.nodes.diagramId, id)),
+      db.select().from(schema.edges).where(eq(schema.edges.diagramId, id)),
+    ])
+    if (nodes.length === 0) {
+      throw new HttpError(400, 'Add a few nodes before asking for suggestions.')
+    }
+
+    const labelById = new Map(nodes.map((n) => [n.id, n.data.label]))
+    const map: MapForAI = {
+      name: diagram?.name ?? 'Untitled',
+      nodes: nodes.map((n) => ({
+        label: n.data.label,
+        type: n.type,
+        ...(n.data.category ? { category: n.data.category } : {}),
+      })),
+      edges: edges.flatMap((e) => {
+        const from = labelById.get(e.sourceNodeId)
+        const to = labelById.get(e.targetNodeId)
+        if (!from || !to) return []
+        return [{ from, to, flow: e.flowType, ...(e.label ? { label: e.label } : {}) }]
+      }),
+    }
+
+    return suggestForMap(map)
   })
 }

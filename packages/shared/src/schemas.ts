@@ -402,3 +402,36 @@ export const vendorLookupSchema = z.object({
   fetchedAt: z.string(),
 })
 export type VendorLookup = z.infer<typeof vendorLookupSchema>
+
+/* ------------------------------------------------------------------ */
+/* AI suggestions (POST /api/diagrams/:id/suggest)                     */
+/* ------------------------------------------------------------------ */
+
+/** What kind of improvement a suggestion proposes. */
+export const aiSuggestionCategorySchema = z.enum([
+  'ai-agent',
+  'automation',
+  'integration',
+  'consolidation',
+  'resilience',
+  'cost',
+])
+export type AiSuggestionCategory = z.infer<typeof aiSuggestionCategorySchema>
+
+export const aiSuggestionImpactSchema = z.enum(['high', 'medium', 'low'])
+export type AiSuggestionImpact = z.infer<typeof aiSuggestionImpactSchema>
+
+export const aiSuggestionSchema = z.object({
+  title: z.string(),
+  detail: z.string(),
+  category: aiSuggestionCategorySchema,
+  impact: aiSuggestionImpactSchema,
+  /** Node labels the suggestion relates to. */
+  targets: z.array(z.string()),
+})
+export type AiSuggestion = z.infer<typeof aiSuggestionSchema>
+
+export const aiSuggestResponseSchema = z.object({
+  suggestions: z.array(aiSuggestionSchema),
+})
+export type AiSuggestResponse = z.infer<typeof aiSuggestResponseSchema>

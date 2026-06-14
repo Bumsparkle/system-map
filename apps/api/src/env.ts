@@ -25,6 +25,9 @@ const envSchema = z.object({
   SUPABASE_ANON_KEY: z.string().optional(),
   // Stand-in user id for that no-auth dev mode (also used to own seeded data).
   DEV_USER_ID: z.string().optional(),
+  // Anthropic API key for AI suggestions (POST /api/diagrams/:id/suggest).
+  // Optional — when absent the endpoint returns 503 and the UI hides the action.
+  ANTHROPIC_API_KEY: z.string().optional(),
 })
 
 export const env = envSchema.parse(process.env)

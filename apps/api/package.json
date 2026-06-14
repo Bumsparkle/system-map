@@ -16,6 +16,7 @@
     "warm": "tsx src/scripts/warmCache.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.104.1",
     "@fastify/cors": "^10.0.2",
     "@fastify/static": "^9.1.3",
     "@supabase/supabase-js": "^2.108.1",
