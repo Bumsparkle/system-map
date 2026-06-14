@@ -17,9 +17,11 @@ import { AI_IMPORT_PROMPT } from '@/lib/importDiagram'
 import { formatRelativeDate } from '@/lib/utils'
 import { toast } from '@/stores/toastStore'
 import type { Company, Diagram } from '@system-map/shared'
-import { Check, LogOut, Plus, Sparkles, Trash2, Upload } from 'lucide-react'
+import { Boxes, Check, LogOut, Plus, Sparkles, Trash2, Upload } from 'lucide-react'
 import { type FormEvent, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+
+const DEMO = import.meta.env.VITE_DEMO === '1'
 
 export function DashboardPage() {
   const companies = useCompanies()
@@ -33,6 +35,15 @@ export function DashboardPage() {
           <span className="font-semibold tracking-tight">System Map</span>
         </div>
         <div className="flex items-center gap-3">
+          {!DEMO && (
+            <Link
+              to="/portfolio"
+              className="flex items-center gap-1.5 rounded-[6px] px-2.5 py-1.5 text-sm font-medium text-ink-muted transition-colors hover:bg-surface-2 hover:text-ink"
+            >
+              <Boxes className="h-4 w-4" />
+              Portfolio
+            </Link>
+          )}
           <Button size="sm" onClick={() => setNewCompanyOpen(true)}>
             <Plus className="h-4 w-4" />
             New company

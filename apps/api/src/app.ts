@@ -9,6 +9,7 @@ import { type AuthUser, authHook } from './plugins/auth.js'
 import corsPlugin from './plugins/cors.js'
 import { companyRoutes } from './routes/companies.js'
 import { diagramRoutes } from './routes/diagrams.js'
+import { portfolioRoutes } from './routes/portfolio.js'
 import { saveRoutes } from './routes/save.js'
 import { vendorRoutes } from './routes/vendors.js'
 
@@ -70,6 +71,7 @@ export async function buildApp(): Promise<FastifyInstance> {
       await api.register(diagramRoutes)
       await api.register(saveRoutes)
       await api.register(vendorRoutes)
+      await api.register(portfolioRoutes)
     },
     { prefix: '/api' },
   )

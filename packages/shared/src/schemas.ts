@@ -435,3 +435,33 @@ export const aiSuggestResponseSchema = z.object({
   suggestions: z.array(aiSuggestionSchema),
 })
 export type AiSuggestResponse = z.infer<typeof aiSuggestResponseSchema>
+
+/* ------------------------------------------------------------------ */
+/* Application portfolio (GET /api/portfolio)                          */
+/* ------------------------------------------------------------------ */
+
+/** One app/vendor aggregated across every diagram the user owns. */
+export const portfolioEntrySchema = z.object({
+  key: z.string(),
+  name: z.string(),
+  type: nodeTypeSchema,
+  logoUrl: z.string().nullable(),
+  category: z.string().nullable(),
+  maturity: vendorMaturitySchema.nullable(),
+  /** Number of distinct diagrams this app appears in. */
+  diagramCount: z.number().int(),
+  diagrams: z.array(z.object({ id: z.string(), name: z.string() })),
+  /** Total monthly spend across instances (minor units), or null if none costed. */
+  monthlyCostMinor: z.number().int().nullable(),
+  currency: currencySchema.nullable(),
+  /** Distinct lifecycle states seen for this app. */
+  lifecycles: z.array(nodeLifecycleSchema),
+  /** Total edges touching this app's nodes across all diagrams. */
+  integrations: z.number().int(),
+})
+export type PortfolioEntry = z.infer<typeof portfolioEntrySchema>
+
+export const portfolioResponseSchema = z.object({
+  entries: z.array(portfolioEntrySchema),
+})
+export type PortfolioResponse = z.infer<typeof portfolioResponseSchema>
