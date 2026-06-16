@@ -2,6 +2,7 @@ import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
 import { useUrlSync } from '@/hooks/useUrlSync'
 import { buildDisplayGraph } from '@/lib/displayGraph'
 import { DND_MIME } from '@/lib/dnd'
+import { facingHandles, nodeCenter } from '@/lib/edgeHandles'
 import { edgeTypes } from '@/lib/edgeRegistry'
 import type { SMEdge, SMNode } from '@/lib/flow'
 import { nodeTypes } from '@/lib/nodeRegistry'
@@ -156,6 +157,14 @@ export function Canvas() {
     return { ghostNodes, ghostEdges, removeNodeSet, removeEdgeSet, updateFlowById, involved }
   }, [previewDelta, activeLayerId, layers, edges])
 
+  // Centre of every rendered node (incl. ghosts) — drives floating edge handles.
+  const centerById = useMemo(() => {
+    const m = new Map<string, { x: number; y: number }>()
+    for (const n of display.nodes) m.set(n.id, nodeCenter(n))
+    if (previewRender) for (const g of previewRender.ghostNodes) m.set(g.id, nodeCenter(g))
+    return m
+  }, [display.nodes, previewRender])
+
   const rfNodes = useMemo(() => {
     if (previewRender) {
       const styled = display.nodes.map((n) => ({
@@ -208,6 +217,14 @@ export function Canvas() {
   }, [diagramState, nodes, display.nodes])
 
   const rfEdges = useMemo(() => {
+    // Attach each edge to the sides of its endpoints that actually face each
+    // other, so arrows never loop around to reach a node that's behind/above.
+    const route = (e: Edge): Edge => {
+      const s = centerById.get(e.source)
+      const t = centerById.get(e.target)
+      return s && t ? { ...e, ...facingHandles(s, t) } : e
+    }
+
     if (previewRender) {
       const styled = display.edges.map((e) => {
         if (previewRender.removeEdgeSet.has(e.id)) return { ...e, className: 'sm-ghost-remove' }
@@ -218,7 +235,7 @@ export function Canvas() {
           previewRender.involved.has(e.source) && previewRender.involved.has(e.target)
         return inContext ? e : { ...e, className: 'sm-preview-dim' }
       })
-      return [...styled, ...previewRender.ghostEdges]
+      return [...styled, ...previewRender.ghostEdges].map(route)
     }
     // In orphan mode every edge connects non-orphans, so dim them all.
     let styled: Edge[]
@@ -229,8 +246,8 @@ export function Canvas() {
         ...e,
         className: focusSets.edgeSet.has(e.id) ? 'sm-focused' : 'sm-dimmed',
       }))
-    return replacesEdges.length ? [...styled, ...replacesEdges] : styled
-  }, [display.edges, focusSets, orphanIds, replacesEdges, previewRender])
+    return (replacesEdges.length ? [...styled, ...replacesEdges] : styled).map(route)
+  }, [display.edges, focusSets, orphanIds, replacesEdges, previewRender, centerById])
 
   const onDragOver = useCallback((event: DragEvent) => {
     event.preventDefault()

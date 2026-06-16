@@ -12,9 +12,9 @@ const elk = new ELK({ workerFactory: () => new ElkWorker() })
 const LAYOUT_OPTIONS: Record<string, string> = {
   'elk.algorithm': 'layered',
   'elk.direction': 'RIGHT',
-  'elk.layered.spacing.nodeNodeBetweenLayers': '140',
-  'elk.spacing.nodeNode': '64',
-  'elk.layered.spacing.edgeNodeBetweenLayers': '40',
+  'elk.layered.spacing.nodeNodeBetweenLayers': '124',
+  'elk.spacing.nodeNode': '46',
+  'elk.layered.spacing.edgeNodeBetweenLayers': '32',
   'elk.layered.considerModelOrder.strategy': 'NODES_AND_EDGES',
   'elk.layered.nodePlacement.strategy': 'BRANDES_KOEPF',
   'elk.layered.nodePlacement.bk.fixedAlignment': 'BALANCED',

@@ -265,8 +265,8 @@ function parseSimple(raw: unknown): ParsedImport {
 /* Lightweight left-to-right layered layout (longest-path columns)     */
 /* ------------------------------------------------------------------ */
 
-const COL_GAP = 260
-const ROW_GAP = 110
+const COL_GAP = 240
+const ROW_GAP = 96
 const ORIGIN = 40
 
 function layeredPositions(
