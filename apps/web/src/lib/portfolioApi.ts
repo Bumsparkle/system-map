@@ -4,12 +4,12 @@ import { useQuery } from '@tanstack/react-query'
 
 const DEMO = import.meta.env.VITE_DEMO === '1'
 
-/** Cross-diagram application portfolio (GET /api/portfolio). Empty in the
+/** Application portfolio, grouped by company (GET /api/portfolio). Empty in the
  *  backend-less demo. */
 export function usePortfolio() {
   return useQuery({
     queryKey: ['portfolio'],
     queryFn: () =>
-      DEMO ? Promise.resolve({ entries: [] }) : apiFetch<PortfolioResponse>('/api/portfolio'),
+      DEMO ? Promise.resolve({ companies: [] }) : apiFetch<PortfolioResponse>('/api/portfolio'),
   })
 }

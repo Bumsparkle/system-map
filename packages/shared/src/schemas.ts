@@ -465,7 +465,7 @@ export type AiSuggestResponse = z.infer<typeof aiSuggestResponseSchema>
 /* Application portfolio (GET /api/portfolio)                          */
 /* ------------------------------------------------------------------ */
 
-/** One app/vendor aggregated across every diagram the user owns. */
+/** One app/vendor aggregated across a single company's diagrams. */
 export const portfolioEntrySchema = z.object({
   key: z.string(),
   name: z.string(),
@@ -473,7 +473,7 @@ export const portfolioEntrySchema = z.object({
   logoUrl: z.string().nullable(),
   category: z.string().nullable(),
   maturity: vendorMaturitySchema.nullable(),
-  /** Number of distinct diagrams this app appears in. */
+  /** Number of distinct diagrams (within the company) this app appears in. */
   diagramCount: z.number().int(),
   diagrams: z.array(z.object({ id: z.string(), name: z.string() })),
   /** Total monthly spend across instances (minor units), or null if none costed. */
@@ -481,12 +481,20 @@ export const portfolioEntrySchema = z.object({
   currency: currencySchema.nullable(),
   /** Distinct lifecycle states seen for this app. */
   lifecycles: z.array(nodeLifecycleSchema),
-  /** Total edges touching this app's nodes across all diagrams. */
+  /** Total edges touching this app's nodes across the company's diagrams. */
   integrations: z.number().int(),
 })
 export type PortfolioEntry = z.infer<typeof portfolioEntrySchema>
 
-export const portfolioResponseSchema = z.object({
+/** A company's slice of the portfolio — its apps rolled up across its diagrams. */
+export const portfolioCompanySchema = z.object({
+  companyId: z.string(),
+  companyName: z.string(),
   entries: z.array(portfolioEntrySchema),
+})
+export type PortfolioCompany = z.infer<typeof portfolioCompanySchema>
+
+export const portfolioResponseSchema = z.object({
+  companies: z.array(portfolioCompanySchema),
 })
 export type PortfolioResponse = z.infer<typeof portfolioResponseSchema>
