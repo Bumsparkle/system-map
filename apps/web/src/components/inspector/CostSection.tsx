@@ -90,6 +90,34 @@ export function CostSection({ node }: { node: SMNode }) {
           </div>
         </div>
 
+        {node.data.lifecycle === 'modifying' && (
+          <div className="flex flex-col gap-1.5 rounded-[6px] border border-border-strong border-dashed bg-surface-2/40 p-2.5">
+            <Label htmlFor="cost-future">Future monthly (after change)</Label>
+            <Input
+              id="cost-future"
+              type="number"
+              min={0}
+              step="any"
+              value={cost.futureMonthlyAmount != null ? cost.futureMonthlyAmount / 100 : ''}
+              placeholder={`${cost.monthlyAmount / 100} — same as now`}
+              className="text-right"
+              onChange={(e) => {
+                const raw = e.target.value
+                if (raw === '') {
+                  patch({ futureMonthlyAmount: undefined })
+                  return
+                }
+                const v = Number.parseFloat(raw)
+                patch({ futureMonthlyAmount: Number.isFinite(v) ? Math.round(v * 100) : undefined })
+              }}
+            />
+            <p className="text-[11px] leading-snug text-ink-subtle">
+              Used in <span className="font-medium text-ink-muted">Future</span> view. Leave blank
+              to keep it the same as now.
+            </p>
+          </div>
+        )}
+
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="cost-basis">Basis</Label>
           <Input

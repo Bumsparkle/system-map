@@ -39,7 +39,8 @@ export function BaseNode({
   const flashing = useUiStore((s) => s.justAddedNodeId === id)
   const editing = useUiStore((s) => s.editingNodeId === id)
   // Delta view: re-skin the node by its lifecycle (spec v1.3 §3.3).
-  const delta = useUiStore((s) => s.diagramState === 'delta')
+  const diagramState = useUiStore((s) => s.diagramState)
+  const delta = diagramState === 'delta'
   const lifecycle = useDiagramStore((s) => s.nodes.find((n) => n.id === id)?.data.lifecycle)
   const cost = useDiagramStore((s) => s.nodes.find((n) => n.id === id)?.data.cost)
   const lc = delta ? LIFECYCLE_DELTA[lifecycle ?? 'existing'] : null
@@ -76,7 +77,7 @@ export function BaseNode({
       <div className="pl-1">{editing ? <NodeLabelEditor id={id} /> : children}</div>
       {cost && (
         <div className="pl-1 font-mono text-[11px] leading-none text-ink-muted">
-          {formatCostCompact(cost)}
+          {formatCostCompact(cost, lifecycle ?? 'existing', diagramState)}
         </div>
       )}
       {SIDES.map(([side, position]) => (

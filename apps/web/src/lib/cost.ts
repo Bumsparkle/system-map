@@ -1,7 +1,7 @@
 import { nodeInState } from '@/lib/displayGraph'
 import type { SMNode } from '@/lib/flow'
 import type { DiagramStateView } from '@/stores/uiStore'
-import type { Currency, Layer, NodeCost } from '@system-map/shared'
+import type { Currency, Layer, NodeCost, NodeLifecycle } from '@system-map/shared'
 
 const SYMBOL: Record<Currency, string> = { GBP: '£', USD: '$', EUR: '€' }
 const LOCALE: Record<Currency, string> = { GBP: 'en-GB', USD: 'en-US', EUR: 'en-IE' }
@@ -20,11 +20,30 @@ export function formatAmount(minor: number, currency: Currency): string {
   }).format(minor / 100)
 }
 
+/**
+ * Monthly amount that applies in a given state: a 'modifying' node uses its
+ * `futureMonthlyAmount` in the Future view; everything else uses `monthlyAmount`.
+ */
+export function effectiveCostMinor(
+  cost: NodeCost,
+  lifecycle: NodeLifecycle,
+  state: DiagramStateView,
+): number {
+  if (state === 'future' && lifecycle === 'modifying' && cost.futureMonthlyAmount != null) {
+    return cost.futureMonthlyAmount
+  }
+  return cost.monthlyAmount
+}
+
 /** Compact node-face cost (spec v1.3 §5.2): "£500/mo", "~£500/mo" (estimated), "£?/mo" (unknown). */
-export function formatCostCompact(cost: NodeCost): string {
+export function formatCostCompact(
+  cost: NodeCost,
+  lifecycle: NodeLifecycle = 'existing',
+  state: DiagramStateView = 'current',
+): string {
   if (cost.confidence === 'unknown') return `${SYMBOL[cost.currency]}?/mo`
   const prefix = cost.confidence === 'estimated' ? '~' : ''
-  return `${prefix}${formatAmount(cost.monthlyAmount, cost.currency)}/mo`
+  return `${prefix}${formatAmount(effectiveCostMinor(cost, lifecycle, state), cost.currency)}/mo`
 }
 
 export type CostRollup = { totalMinor: number; uncosted: number; currency: Currency }
@@ -38,12 +57,13 @@ export function rollupCost(nodes: SMNode[], layers: Layer[], state: DiagramState
   let currency: Currency = 'GBP'
   for (const n of nodes) {
     if (hiddenLayers.has(n.data.layerId)) continue
-    if (!nodeInState(n.data.lifecycle ?? 'existing', state)) continue
+    const lifecycle = n.data.lifecycle ?? 'existing'
+    if (!nodeInState(lifecycle, state)) continue
     const cost = n.data.cost
     if (!cost) continue
     currency = cost.currency
     if (cost.confidence === 'unknown') uncosted++
-    else totalMinor += cost.monthlyAmount
+    else totalMinor += effectiveCostMinor(cost, lifecycle, state)
   }
   return { totalMinor, uncosted, currency }
 }
@@ -53,9 +73,10 @@ export function layerCostMinor(nodes: SMNode[], layerId: string, state: DiagramS
   let total = 0
   for (const n of nodes) {
     if (n.data.layerId !== layerId) continue
-    if (!nodeInState(n.data.lifecycle ?? 'existing', state)) continue
+    const lifecycle = n.data.lifecycle ?? 'existing'
+    if (!nodeInState(lifecycle, state)) continue
     const cost = n.data.cost
-    if (cost && cost.confidence !== 'unknown') total += cost.monthlyAmount
+    if (cost && cost.confidence !== 'unknown') total += effectiveCostMinor(cost, lifecycle, state)
   }
   return total
 }

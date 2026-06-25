@@ -60,6 +60,9 @@ export const nodeCostSchema = z.object({
   basis: z.string().optional(),
   notes: z.string().optional(),
   confidence: costConfidenceSchema,
+  // Cost after a planned change — used by the Future-state roll-up for nodes
+  // marked 'modifying' (spec v1.3 §5). Absent ⇒ future cost = current.
+  futureMonthlyAmount: z.number().int().optional(),
 })
 export type NodeCost = z.infer<typeof nodeCostSchema>
 
