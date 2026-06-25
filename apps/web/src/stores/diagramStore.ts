@@ -63,7 +63,10 @@ type DiagramStore = {
   removeNode: (id: string) => void
   applyPreview: (delta: PreviewDelta) => void
   duplicateSelected: () => void
-  applyLayout: (positions: Record<string, { x: number; y: number }>) => void
+  applyLayout: (
+    positions: Record<string, { x: number; y: number }>,
+    edgeHandles?: Record<string, { sourceHandle: string; targetHandle: string }>,
+  ) => void
   selectNode: (id: string) => void
 
   updateEdgeData: (id: string, patch: Partial<EdgeData>) => void
@@ -364,12 +367,21 @@ export const useDiagramStore = create<DiagramStore>()(
           return { nodes: [...s.nodes.map((n) => ({ ...n, selected: false })), ...clones] }
         }),
 
-      applyLayout: (positions) =>
+      // Auto-layout (Tidy) sets positions, and optionally re-points each edge to
+      // the sides that face each other. Manual handle choices are otherwise left
+      // alone — only the "Tidy" action re-routes. One set() ⇒ one undo step.
+      applyLayout: (positions, edgeHandles) =>
         set((s) => ({
           nodes: s.nodes.map((n) => {
             const p = positions[n.id]
             return p ? { ...n, position: p } : n
           }),
+          edges: edgeHandles
+            ? s.edges.map((e) => {
+                const h = edgeHandles[e.id]
+                return h ? { ...e, sourceHandle: h.sourceHandle, targetHandle: h.targetHandle } : e
+              })
+            : s.edges,
         })),
 
       selectNode: (id) =>

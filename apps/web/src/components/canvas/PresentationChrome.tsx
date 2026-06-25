@@ -1,3 +1,4 @@
+import { StateToggle } from '@/components/toolbar/StateToggle'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import type { SMNode } from '@/lib/flow'
 import { NODE_TYPE_LABEL } from '@/lib/nodeRegistry'
@@ -50,6 +51,9 @@ export function PresentationChrome() {
         <ToolButton onClick={() => fitView({ duration: 200, padding: 0.3 })} label="Fit view">
           <Maximize className="h-4 w-4" />
         </ToolButton>
+        <div className="mx-0.5 h-5 w-px bg-border" />
+        {/* Current / Future / Delta — switch state while presenting. */}
+        <StateToggle />
         <div className="mx-0.5 h-5 w-px bg-border" />
         <Popover>
           <PopoverTrigger asChild>
