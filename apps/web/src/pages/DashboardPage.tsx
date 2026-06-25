@@ -7,17 +7,41 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useCompanies, useCreateCompany, useCreateDiagram, useDiagrams } from '@/lib/api'
 import { useAuth } from '@/lib/auth'
-import { useDeleteDiagram, useImportDiagram } from '@/lib/diagramMutations'
+import {
+  useDeleteDiagram,
+  useDuplicateDiagram,
+  useImportDiagram,
+  useMoveDiagram,
+} from '@/lib/diagramMutations'
 import { AI_IMPORT_PROMPT } from '@/lib/importDiagram'
 import { formatRelativeDate } from '@/lib/utils'
 import { toast } from '@/stores/toastStore'
 import type { Company, Diagram } from '@system-map/shared'
-import { Boxes, Check, LogOut, Plus, Sparkles, Trash2, Upload } from 'lucide-react'
+import {
+  Boxes,
+  Check,
+  Copy,
+  FolderInput,
+  LogOut,
+  MoreHorizontal,
+  Plus,
+  Sparkles,
+  Trash2,
+  Upload,
+} from 'lucide-react'
 import { type FormEvent, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 
@@ -78,7 +102,7 @@ export function DashboardPage() {
         {companies.data && companies.data.length > 0 && (
           <div className="flex flex-col gap-12">
             {companies.data.map((company) => (
-              <CompanySection key={company.id} company={company} />
+              <CompanySection key={company.id} company={company} companies={companies.data} />
             ))}
           </div>
         )}
@@ -107,7 +131,7 @@ function AccountMenu() {
   )
 }
 
-function CompanySection({ company }: { company: Company }) {
+function CompanySection({ company, companies }: { company: Company; companies: Company[] }) {
   const diagrams = useDiagrams(company.id)
   const [newDiagramOpen, setNewDiagramOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
@@ -153,15 +177,12 @@ function CompanySection({ company }: { company: Company }) {
                 Updated {formatRelativeDate(diagram.updatedAt)}
               </span>
             </button>
-            <button
-              type="button"
-              onClick={() => setDeleteTarget(diagram)}
-              aria-label={`Delete ${diagram.name}`}
-              title="Delete diagram"
-              className="absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-[6px] text-ink-subtle opacity-0 transition-[opacity,color,background-color] duration-[120ms] ease-out hover:bg-surface-2 hover:text-red-600 focus-visible:opacity-100 group-hover:opacity-100"
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
+            <DiagramCardMenu
+              diagram={diagram}
+              company={company}
+              companies={companies}
+              onDelete={() => setDeleteTarget(diagram)}
+            />
           </div>
         ))}
 
@@ -195,6 +216,86 @@ function CompanySection({ company }: { company: Company }) {
         onOpenChange={(open) => !open && setDeleteTarget(null)}
       />
     </section>
+  )
+}
+
+/** Per-card "⋯" menu: duplicate, move to another company, or delete. */
+function DiagramCardMenu({
+  diagram,
+  company,
+  companies,
+  onDelete,
+}: {
+  diagram: Diagram
+  company: Company
+  companies: Company[]
+  onDelete: () => void
+}) {
+  const duplicate = useDuplicateDiagram()
+  const move = useMoveDiagram()
+  const others = companies.filter((c) => c.id !== company.id)
+
+  function handleDuplicate() {
+    duplicate.mutate(
+      { id: diagram.id },
+      {
+        onSuccess: () => toast({ message: `Duplicated “${diagram.name}”` }),
+        onError: () => toast({ message: 'Could not duplicate the diagram', variant: 'error' }),
+      },
+    )
+  }
+
+  function handleMove(to: Company) {
+    move.mutate(
+      { id: diagram.id, fromCompanyId: company.id, toCompanyId: to.id },
+      {
+        onSuccess: () => toast({ message: `Moved “${diagram.name}” to ${to.name}` }),
+        onError: () => toast({ message: 'Could not move the diagram', variant: 'error' }),
+      },
+    )
+  }
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          aria-label={`Actions for ${diagram.name}`}
+          title="More actions"
+          className="absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-[6px] text-ink-subtle opacity-0 transition-[opacity,color,background-color] duration-[120ms] ease-out hover:bg-surface-2 hover:text-ink focus-visible:opacity-100 group-hover:opacity-100 data-[state=open]:opacity-100"
+        >
+          <MoreHorizontal className="h-4 w-4" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent>
+        <DropdownMenuItem onSelect={handleDuplicate}>
+          <Copy className="h-4 w-4 text-ink-muted" />
+          Duplicate
+        </DropdownMenuItem>
+
+        {others.length > 0 && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuLabel>Move to</DropdownMenuLabel>
+            {others.map((c) => (
+              <DropdownMenuItem key={c.id} onSelect={() => handleMove(c)}>
+                <FolderInput className="h-4 w-4 text-ink-muted" />
+                <span className="truncate">{c.name}</span>
+              </DropdownMenuItem>
+            ))}
+          </>
+        )}
+
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onSelect={onDelete}
+          className="text-red-600 focus:bg-red-50 focus:text-red-700"
+        >
+          <Trash2 className="h-4 w-4" />
+          Delete
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }
 

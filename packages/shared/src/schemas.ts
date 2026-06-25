@@ -239,8 +239,17 @@ export type CreateDiagramInput = z.infer<typeof createDiagramInput>
 export const updateDiagramInput = z.object({
   name: z.string().min(1).optional(),
   description: z.string().nullable().optional(),
+  // Move the diagram to another company you own (must be a company id you own).
+  companyId: z.string().optional(),
 })
 export type UpdateDiagramInput = z.infer<typeof updateDiagramInput>
+
+/** Duplicate a diagram into a company (defaults to its current one). */
+export const duplicateDiagramInput = z.object({
+  companyId: z.string().optional(),
+  name: z.string().min(1).optional(),
+})
+export type DuplicateDiagramInput = z.infer<typeof duplicateDiagramInput>
 
 export const createLayerInput = z.object({
   id: z.string().optional(),

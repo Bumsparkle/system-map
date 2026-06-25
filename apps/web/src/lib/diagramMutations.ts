@@ -1,8 +1,9 @@
-import { ApiError, api, qk } from '@/lib/api'
+import { ApiError, api, apiFetch, qk } from '@/lib/api'
 import { API_URL } from '@/lib/apiBase'
 import { saveDiagram } from '@/lib/autoSave'
 import { parseImport } from '@/lib/importDiagram'
 import { authHeaders } from '@/lib/supabaseClient'
+import type { Diagram } from '@system-map/shared'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 const DEMO = import.meta.env.VITE_DEMO === '1'
@@ -26,6 +27,40 @@ export function useDeleteDiagram(companyId: string) {
   return useMutation({
     mutationFn: deleteDiagram,
     onSuccess: () => qc.invalidateQueries({ queryKey: qk.diagrams(companyId) }),
+  })
+}
+
+/** Deep-copy a diagram into a company (defaults to its own). Refreshes the
+ *  target company's list so the copy shows up immediately. */
+export function useDuplicateDiagram() {
+  const qc = useQueryClient()
+  return useMutation<Diagram, Error, { id: string; companyId?: string }>({
+    mutationFn: ({ id, companyId }) => {
+      if (DEMO) throw new ApiError(503, 'This is a read-only demo — changes are not saved.')
+      return apiFetch<Diagram>(`/api/diagrams/${id}/duplicate`, {
+        method: 'POST',
+        body: JSON.stringify(companyId ? { companyId } : {}),
+      })
+    },
+    onSuccess: (created) => qc.invalidateQueries({ queryKey: qk.diagrams(created.companyId) }),
+  })
+}
+
+/** Move a diagram to another company. Refreshes both the source and target lists. */
+export function useMoveDiagram() {
+  const qc = useQueryClient()
+  return useMutation<Diagram, Error, { id: string; fromCompanyId: string; toCompanyId: string }>({
+    mutationFn: ({ id, toCompanyId }) => {
+      if (DEMO) throw new ApiError(503, 'This is a read-only demo — changes are not saved.')
+      return apiFetch<Diagram>(`/api/diagrams/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ companyId: toCompanyId }),
+      })
+    },
+    onSuccess: (_diagram, { fromCompanyId, toCompanyId }) => {
+      qc.invalidateQueries({ queryKey: qk.diagrams(fromCompanyId) })
+      qc.invalidateQueries({ queryKey: qk.diagrams(toCompanyId) })
+    },
   })
 }
 

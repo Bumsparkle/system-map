@@ -1,4 +1,4 @@
-import { createDiagramInput, updateDiagramInput } from '@system-map/shared'
+import { createDiagramInput, duplicateDiagramInput, updateDiagramInput } from '@system-map/shared'
 import { and, asc, desc, eq, getTableColumns } from 'drizzle-orm'
 import type { FastifyPluginAsync } from 'fastify'
 import { nanoid } from 'nanoid'
@@ -87,6 +87,11 @@ export const diagramRoutes: FastifyPluginAsync = async (app) => {
     const patch: Partial<typeof schema.diagrams.$inferInsert> = { updatedAt: new Date() }
     if (body.name !== undefined) patch.name = body.name
     if (body.description !== undefined) patch.description = body.description
+    // Move to another company: the target must also belong to the caller.
+    if (body.companyId !== undefined) {
+      await assertCompanyOwned(body.companyId, req.user.id)
+      patch.companyId = body.companyId
+    }
     const [row] = await db
       .update(schema.diagrams)
       .set(patch)
@@ -103,6 +108,126 @@ export const diagramRoutes: FastifyPluginAsync = async (app) => {
     if (!row) throw notFound('Diagram')
     reply.code(204)
     return null
+  })
+
+  // Deep-copy a diagram (layers/nodes/edges/views) into a company — its own by
+  // default, or another the caller owns. Every id is regenerated so the copy is
+  // fully independent of the original.
+  app.post('/diagrams/:id/duplicate', async (req, reply) => {
+    const { id } = req.params as { id: string }
+    const body = duplicateDiagramInput.parse(req.body ?? {})
+
+    const [src] = await db
+      .select({
+        name: schema.diagrams.name,
+        description: schema.diagrams.description,
+        companyId: schema.diagrams.companyId,
+      })
+      .from(schema.diagrams)
+      .innerJoin(schema.companies, eq(schema.diagrams.companyId, schema.companies.id))
+      .where(and(eq(schema.diagrams.id, id), eq(schema.companies.ownerId, req.user.id)))
+      .limit(1)
+    if (!src) throw notFound('Diagram')
+
+    const targetCompanyId = body.companyId ?? src.companyId
+    if (body.companyId && body.companyId !== src.companyId) {
+      await assertCompanyOwned(body.companyId, req.user.id)
+    }
+
+    const [layers, nodes, edges, views] = await Promise.all([
+      db.select().from(schema.layers).where(eq(schema.layers.diagramId, id)),
+      db.select().from(schema.nodes).where(eq(schema.nodes.diagramId, id)),
+      db.select().from(schema.edges).where(eq(schema.edges.diagramId, id)),
+      db.select().from(schema.views).where(eq(schema.views.diagramId, id)),
+    ])
+
+    const newDiagramId = nanoid()
+    const layerMap = new Map(layers.map((l) => [l.id, nanoid()]))
+    const nodeMap = new Map(nodes.map((n) => [n.id, nanoid()]))
+    const fallbackLayer = [...layerMap.values()][0]
+
+    const created = await db.transaction(async (tx) => {
+      const [diagram] = await tx
+        .insert(schema.diagrams)
+        .values({
+          id: newDiagramId,
+          companyId: targetCompanyId,
+          name: body.name ?? `${src.name} (copy)`,
+          description: src.description,
+        })
+        .returning()
+
+      if (layers.length > 0) {
+        await tx.insert(schema.layers).values(
+          layers.map((l) => ({
+            id: layerMap.get(l.id) as string,
+            diagramId: newDiagramId,
+            name: l.name,
+            color: l.color,
+            order: l.order,
+            visible: l.visible,
+          })),
+        )
+      }
+
+      if (nodes.length > 0) {
+        await tx.insert(schema.nodes).values(
+          nodes.map((n) => ({
+            id: nodeMap.get(n.id) as string,
+            diagramId: newDiagramId,
+            layerId: layerMap.get(n.layerId) ?? (fallbackLayer as string),
+            type: n.type,
+            positionX: n.positionX,
+            positionY: n.positionY,
+            width: n.width,
+            height: n.height,
+            data: n.data,
+          })),
+        )
+      }
+
+      // Skip any edge whose endpoints didn't survive (defensive — shouldn't happen).
+      const validEdges = edges.filter(
+        (e) => nodeMap.has(e.sourceNodeId) && nodeMap.has(e.targetNodeId),
+      )
+      if (validEdges.length > 0) {
+        await tx.insert(schema.edges).values(
+          validEdges.map((e) => ({
+            id: nanoid(),
+            diagramId: newDiagramId,
+            sourceNodeId: nodeMap.get(e.sourceNodeId) as string,
+            targetNodeId: nodeMap.get(e.targetNodeId) as string,
+            sourceHandle: e.sourceHandle,
+            targetHandle: e.targetHandle,
+            flowType: e.flowType,
+            label: e.label,
+            data: e.data,
+          })),
+        )
+      }
+
+      if (views.length > 0) {
+        await tx.insert(schema.views).values(
+          views.map((v) => ({
+            id: nanoid(),
+            diagramId: newDiagramId,
+            name: v.name,
+            filter: {
+              ...v.filter,
+              layerIds: v.filter.layerIds
+                .map((lid) => layerMap.get(lid))
+                .filter((x): x is string => !!x),
+            },
+            isDefault: v.isDefault,
+          })),
+        )
+      }
+
+      return diagram
+    })
+
+    reply.code(201)
+    return created
   })
 
   // AI improvement suggestions: send the map to an LLM and return structured
