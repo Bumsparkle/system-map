@@ -197,7 +197,10 @@ export function FlowEdge({
       {label ? (
         <EdgeLabelRenderer>
           <div
-            className="nodrag nopan pointer-events-auto absolute -translate-x-1/2 -translate-y-1/2 rounded-[5px] border border-border bg-surface px-1.5 py-0.5 text-[11px] font-medium text-ink shadow-node"
+            className={`nodrag nopan absolute -translate-x-1/2 -translate-y-1/2 rounded-[5px] border border-border bg-surface px-1.5 py-0.5 text-[11px] font-medium text-ink shadow-node ${
+              // While selected, don't let the label cover/block the bend handles.
+              selected ? 'pointer-events-none opacity-70' : 'pointer-events-auto'
+            }`}
             style={{ left: labelX, top: labelY }}
           >
             {label}

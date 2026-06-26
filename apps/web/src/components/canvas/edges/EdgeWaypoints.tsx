@@ -1,6 +1,6 @@
 import { useDiagramStore } from '@/stores/diagramStore'
 import { useUiStore } from '@/stores/uiStore'
-import { useReactFlow } from '@xyflow/react'
+import { useReactFlow, useViewport } from '@xyflow/react'
 import {
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
@@ -35,6 +35,9 @@ export function EdgeWaypoints({
   const setDraft = useUiStore((s) => s.setEdgeWaypointDraft)
   const updateEdgeData = useDiagramStore((s) => s.updateEdgeData)
   const { screenToFlowPosition } = useReactFlow()
+  // Offset the add-dots ~22px off the line in *screen* space (÷ zoom converts to
+  // flow units) so they clear the label at any zoom level.
+  const { zoom } = useViewport()
 
   const working = useRef<Pt[]>([])
   const dragIndex = useRef(-1)
@@ -80,14 +83,23 @@ export function EdgeWaypoints({
       {full.slice(0, -1).map((p, s) => {
         const q = full[s + 1]
         if (!q) return null
-        const mid = { x: (p.x + q.x) / 2, y: (p.y + q.y) / 2 }
+        // Sit the dot just off the line (perpendicular) so an edge label, which
+        // is centred on the midpoint, doesn't cover or block it.
+        const dx = q.x - p.x
+        const dy = q.y - p.y
+        const len = Math.hypot(dx, dy) || 1
+        const off = 22 / zoom
+        const mid = {
+          x: (p.x + q.x) / 2 + (-dy / len) * off,
+          y: (p.y + q.y) / 2 + (dx / len) * off,
+        }
         return (
           <circle
             // biome-ignore lint/suspicious/noArrayIndexKey: segments are positional
             key={`add-${s}`}
             cx={mid.x}
             cy={mid.y}
-            r={4}
+            r={4.5}
             className="sm-wp-add"
             onPointerDown={(e) =>
               beginDrag(e, [...waypoints.slice(0, s), mid, ...waypoints.slice(s)], s)
