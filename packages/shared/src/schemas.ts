@@ -124,6 +124,9 @@ export const edgeDataSchema = z.object({
   animated: z.boolean().optional(),
   // Current/future-state lifecycle (spec v1.3 §2.3).
   lifecycle: edgeLifecycleSchema.optional(),
+  // Manual bend points (flow coords). When present, the edge routes a smooth
+  // spline through them instead of the default source→target curve.
+  waypoints: z.array(z.object({ x: z.number(), y: z.number() })).optional(),
 })
 export type EdgeData = z.infer<typeof edgeDataSchema>
 

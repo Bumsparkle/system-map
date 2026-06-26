@@ -75,6 +75,18 @@ export function ContextMenu({
         >
           {direction === 'two_way' ? 'Make one-way' : 'Make two-way'}
         </button>
+        {edge.data?.waypoints && edge.data.waypoints.length > 0 && (
+          <button
+            type="button"
+            onClick={() => {
+              updateEdgeData(edge.id, { waypoints: undefined })
+              onClose()
+            }}
+            className="flex w-full items-center rounded-[5px] px-2 py-1.5 text-sm text-ink transition-colors duration-[120ms] ease-out hover:bg-surface-2"
+          >
+            Straighten path
+          </button>
+        )}
         <div className="my-1 h-px bg-border" />
         <button
           type="button"

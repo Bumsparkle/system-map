@@ -54,6 +54,12 @@ type UiStore = {
   // null when nothing is being previewed. Cleared on Apply/Discard and on unmount.
   previewDelta: PreviewDelta | null
   setPreviewDelta: (delta: PreviewDelta | null) => void
+  // Live (un-tracked) waypoints while a bend handle is being dragged, so the path
+  // follows the cursor without polluting undo history — committed once on release.
+  edgeWaypointDraft: { edgeId: string; waypoints: { x: number; y: number }[] } | null
+  setEdgeWaypointDraft: (
+    draft: { edgeId: string; waypoints: { x: number; y: number }[] } | null,
+  ) => void
 }
 
 export const useUiStore = create<UiStore>((set) => ({
@@ -105,4 +111,6 @@ export const useUiStore = create<UiStore>((set) => ({
   setDiagramState: (diagramState) => set({ diagramState }),
   previewDelta: null,
   setPreviewDelta: (previewDelta) => set({ previewDelta }),
+  edgeWaypointDraft: null,
+  setEdgeWaypointDraft: (edgeWaypointDraft) => set({ edgeWaypointDraft }),
 }))

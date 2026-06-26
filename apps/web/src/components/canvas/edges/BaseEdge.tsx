@@ -1,4 +1,5 @@
 import type { SMEdge } from '@/lib/flow'
+import { useUiStore } from '@/stores/uiStore'
 import type { EdgeRouting, FlowType } from '@system-map/shared'
 import {
   EdgeLabelRenderer,
@@ -9,6 +10,30 @@ import {
   getStraightPath,
 } from '@xyflow/react'
 import type { CSSProperties, ReactNode } from 'react'
+import { EdgeWaypoints } from './EdgeWaypoints'
+
+type Pt = { x: number; y: number }
+
+/** Smooth Catmull-Rom spline through source → waypoints → target. Returns
+ *  [svgPath, labelX, labelY]. */
+function buildSpline(points: Pt[]): [string, number, number] {
+  const first = points[0]
+  if (!first || points.length < 2) {
+    return [first ? `M ${first.x},${first.y}` : '', first?.x ?? 0, first?.y ?? 0]
+  }
+  let d = `M ${first.x},${first.y}`
+  for (let i = 0; i < points.length - 1; i++) {
+    const p1 = points[i]
+    const p2 = points[i + 1]
+    if (!p1 || !p2) continue
+    const p0 = points[i - 1] ?? p1
+    const p3 = points[i + 2] ?? p2
+    d += ` C ${p1.x + (p2.x - p0.x) / 6},${p1.y + (p2.y - p0.y) / 6} ${p2.x - (p3.x - p1.x) / 6},${p2.y - (p3.y - p1.y) / 6} ${p2.x},${p2.y}`
+  }
+  const a = points[Math.floor((points.length - 1) / 2)] ?? first
+  const b = points[Math.ceil((points.length - 1) / 2)] ?? a
+  return [d, (a.x + b.x) / 2, (a.y + b.y) / 2]
+}
 
 export type ResolvedEdgeStyle = {
   color: string
@@ -106,15 +131,24 @@ export function FlowEdge({
   markerId: string
   children?: ReactNode
 }) {
+  // Live draft (while a bend is being dragged) wins over the stored waypoints, so
+  // the path follows the cursor without writing to undo history every frame.
+  const draftWaypoints = useUiStore((s) =>
+    s.edgeWaypointDraft?.edgeId === id ? s.edgeWaypointDraft.waypoints : null,
+  )
+  const waypoints = draftWaypoints ?? data?.waypoints ?? []
+
   const routing = data?.routing ?? DEFAULT_ROUTING
-  const [edgePath, labelX, labelY] = routedPath(routing, {
-    sourceX,
-    sourceY,
-    targetX,
-    targetY,
-    sourcePosition,
-    targetPosition,
-  })
+  const [edgePath, labelX, labelY] = waypoints.length
+    ? buildSpline([{ x: sourceX, y: sourceY }, ...waypoints, { x: targetX, y: targetY }])
+    : routedPath(routing, {
+        sourceX,
+        sourceY,
+        targetX,
+        targetY,
+        sourcePosition,
+        targetPosition,
+      })
 
   const twoWay = (data?.direction ?? 'one_way') === 'two_way'
   const markerEnd = `url(#${markerId})`
@@ -150,6 +184,16 @@ export function FlowEdge({
         interactionWidth={24}
         style={pathStyle}
       />
+      {selected && (
+        <EdgeWaypoints
+          edgeId={id}
+          sourceX={sourceX}
+          sourceY={sourceY}
+          targetX={targetX}
+          targetY={targetY}
+          waypoints={waypoints}
+        />
+      )}
       {label ? (
         <EdgeLabelRenderer>
           <div

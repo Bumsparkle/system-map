@@ -154,6 +154,28 @@
   box-shadow: 0 0 0 1.5px var(--color-accent), var(--shadow-node);
 }
 
+/* Bend handles on a selected edge (drag to shape the path). */
+.sm-wp {
+  fill: var(--color-accent);
+  stroke: #fff;
+  stroke-width: 1.5;
+  cursor: grab;
+}
+.sm-wp:active {
+  cursor: grabbing;
+}
+.sm-wp-add {
+  fill: #fff;
+  stroke: var(--color-accent);
+  stroke-width: 1.5;
+  opacity: 0.4;
+  cursor: copy;
+  transition: opacity 120ms ease-out;
+}
+.sm-wp-add:hover {
+  opacity: 1;
+}
+
 /* AI suggestion preview: a faded "after" overlay (spec: ghost preview).
    Untouched parts of the map are softly dimmed so the proposal stands out. */
 .react-flow__node.sm-preview-dim,
