@@ -1,5 +1,5 @@
 import { type NodeSize, sizeStyle } from '@/lib/appearance'
-import { formatCostCompact } from '@/lib/cost'
+import { formatAmount, formatCostCompact } from '@/lib/cost'
 import { LIFECYCLE_DELTA } from '@/lib/lifecycle'
 import { cn } from '@/lib/utils'
 import { useDiagramStore } from '@/stores/diagramStore'
@@ -75,11 +75,36 @@ export function BaseNode({
         </span>
       )}
       <div className="pl-1">{editing ? <NodeLabelEditor id={id} /> : children}</div>
-      {cost && (
-        <div className="pl-1 font-mono text-[11px] leading-none text-ink-muted">
-          {formatCostCompact(cost, lifecycle ?? 'existing', diagramState)}
-        </div>
-      )}
+      {cost &&
+        (delta &&
+        lifecycle === 'modifying' &&
+        cost.confidence !== 'unknown' &&
+        cost.futureMonthlyAmount != null &&
+        cost.futureMonthlyAmount !== cost.monthlyAmount ? (
+          // Delta view: show the price change as "before → after" (spec v1.3 §5).
+          <div className="flex items-center gap-1 pl-1 font-mono text-[11px] leading-none">
+            <span className="text-ink-subtle">
+              {cost.confidence === 'estimated' ? '~' : ''}
+              {formatAmount(cost.monthlyAmount, cost.currency)}
+            </span>
+            <span className="text-ink-subtle">→</span>
+            <span
+              style={{
+                color:
+                  cost.futureMonthlyAmount > cost.monthlyAmount
+                    ? 'var(--color-flow-manual)'
+                    : 'var(--color-flow-cash)',
+              }}
+            >
+              {cost.confidence === 'estimated' ? '~' : ''}
+              {formatAmount(cost.futureMonthlyAmount, cost.currency)}/mo
+            </span>
+          </div>
+        ) : (
+          <div className="pl-1 font-mono text-[11px] leading-none text-ink-muted">
+            {formatCostCompact(cost, lifecycle ?? 'existing', diagramState)}
+          </div>
+        ))}
       {SIDES.map(([side, position]) => (
         <Handle key={side} id={side} type="source" position={position} />
       ))}
