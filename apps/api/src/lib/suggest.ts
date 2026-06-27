@@ -28,7 +28,7 @@ For each suggestion:
 - Rate "impact" as high, medium, or low.
 
 ALSO fill "preview" with the concrete edit that realises the suggestion, so it can be drawn on the canvas as a faded "after" state and applied in one click. Reference existing nodes by their EXACT label; introduce new nodes in "addNodes" and reference them by the label you gave them.
-- "addNodes": new nodes to create — e.g. an "AI agent" or "Integration service" node. Pick the closest "type": app, system, data_source, external_entity, cash, group, or custom (use "app" for a SaaS/tool, "system" for an internal service or AI agent).
+- "addNodes": new nodes to create — e.g. an "AI agent" or "Integration service" node. Pick the closest "type": app, system, data_source, external_entity (an outside customer/vendor/partner), internal_entity (an in-house team/department/role), cash, group, or custom (use "app" for a SaaS/tool, "system" for an internal service or AI agent).
 - "addEdges": new flows. "from"/"to" are node labels (existing or newly-added). "flow" is data, cash, api, manual, event, or custom. "label" can be a short verb phrase or "".
 - "removeNodes" / "removeEdges": things to retire (consolidation/resilience). Only reference nodes/flows that exist.
 - "updateEdges": flows whose type should change, e.g. a "manual" handoff becoming "api".
@@ -36,7 +36,16 @@ ALSO fill "preview" with the concrete edit that realises the suggestion, so it c
 
 Return 3-6 suggestions, best first. Lead with automation and AI-agent opportunities. If the map is tiny, return fewer but still useful suggestions.`
 
-const NODE_TYPES = ['app', 'system', 'data_source', 'external_entity', 'cash', 'group', 'custom']
+const NODE_TYPES = [
+  'app',
+  'system',
+  'data_source',
+  'external_entity',
+  'internal_entity',
+  'cash',
+  'group',
+  'custom',
+]
 const FLOW_TYPES = ['data', 'cash', 'api', 'manual', 'event', 'custom']
 
 // OpenAI strict mode requires every property to appear in `required` and

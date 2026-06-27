@@ -5,11 +5,21 @@ import { CustomNode } from '@/components/canvas/nodes/CustomNode'
 import { DataSourceNode } from '@/components/canvas/nodes/DataSourceNode'
 import { ExternalEntityNode } from '@/components/canvas/nodes/ExternalEntityNode'
 import { GroupNode } from '@/components/canvas/nodes/GroupNode'
+import { InternalEntityNode } from '@/components/canvas/nodes/InternalEntityNode'
 import { SystemNode } from '@/components/canvas/nodes/SystemNode'
 import type { SMNode } from '@/lib/flow'
 import type { NodeType } from '@system-map/shared'
 import type { NodeProps, NodeTypes } from '@xyflow/react'
-import { AppWindow, Database, Group, PoundSterling, Server, Shapes, Users } from 'lucide-react'
+import {
+  AppWindow,
+  Database,
+  Group,
+  PoundSterling,
+  Server,
+  Shapes,
+  Users,
+  UsersRound,
+} from 'lucide-react'
 import type { ComponentType } from 'react'
 
 export type NodeTypeMeta = {
@@ -31,6 +41,7 @@ export const NODE_DEFAULT_LABEL: Record<NodeType, string> = {
   system: 'New service',
   data_source: 'New data source',
   external_entity: 'New entity',
+  internal_entity: 'New team',
   cash: 'New cash flow',
   group: 'New group',
   custom: 'New node',
@@ -42,6 +53,7 @@ export const NODE_TYPE_LABEL: Record<NodeType, string> = {
   system: 'System',
   data_source: 'Data source',
   external_entity: 'External entity',
+  internal_entity: 'Internal team',
   cash: 'Cash',
   group: 'Group',
   custom: 'Custom',
@@ -88,6 +100,16 @@ export const nodeRegistry = {
       hint: 'Customer, vendor, partner',
       category: 'People & orgs',
       icon: Users,
+    },
+  },
+  internal_entity: {
+    component: InternalEntityNode,
+    meta: {
+      type: 'internal_entity',
+      label: 'Internal team',
+      hint: 'Team, department, role',
+      category: 'People & orgs',
+      icon: UsersRound,
     },
   },
   cash: {

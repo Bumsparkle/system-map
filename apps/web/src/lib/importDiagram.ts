@@ -34,7 +34,7 @@ Output ONLY the JSON — no explanation and no markdown code fences. Match this 
 }
 
 Rules:
-- node "type" is one of: app (a third-party SaaS/vendor, e.g. Stripe, Salesforce), system (an internal service or component), data_source (a database, warehouse or feed), external_entity (a person or organisation, e.g. a customer or broker), cash (money, revenue or cost), group (a container), custom. Use "app" if unsure.
+- node "type" is one of: app (a third-party SaaS/vendor, e.g. Stripe, Salesforce), system (an internal service or component), data_source (a database, warehouse or feed), external_entity (an outside person or organisation, e.g. a customer or broker), internal_entity (an in-house team, department or role, e.g. Sales or Finance), cash (money, revenue or cost), group (a container), custom. Use "app" if unsure.
 - edge "type" is one of: data, api, cash (money movement), manual (an offline/manual step), event (async event or message), custom. Use "data" if unsure.
 - "category" on a node is optional and groups related nodes, e.g. "Frontend", "Payments".
 - Every edge "from" and "to" must exactly match a node "label".

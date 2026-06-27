@@ -9,6 +9,7 @@ export const nodeTypeSchema = z.enum([
   'system',
   'data_source',
   'external_entity',
+  'internal_entity',
   'cash',
   'group',
   'custom',
